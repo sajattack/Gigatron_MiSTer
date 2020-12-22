@@ -1,0 +1,12 @@
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/gigatron_eeprom_from_file.sv
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/gigatron_onefile.sv
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/gigatron_option_rom.sv
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/gigatron_shell.sv
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/menlo_babelfish.sv
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/x74xx153.sv
+set_global_assignment -name QIP_FILE rtl/gigatron_ram.qip
+set_global_assignment -name TEXT_FILE rtl/gt1_tetris_verilog_data.txt
+set_global_assignment -name TEXT_FILE rtl/ROMv2_verilog_data.txt
+set_global_assignment -name SDC_FILE Gigatron.sdc
+set_global_assignment -name SYSTEMVERILOG_FILE Gigatron.sv
+
