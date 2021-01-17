@@ -11,9 +11,6 @@
 // general philosophy of this module.
 //
 
-// set timescale for 1ns with 100ps precision.
-`timescale 1ns / 100ps
-
 //
 // 07/03/2018
 //

@@ -1,4 +1,3 @@
-`timescale 1ns/10ps
 module  pll_0002(
 
 	// interface 'refclk'

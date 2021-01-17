@@ -67,9 +67,6 @@
 // and re-distributed along with these files.
 //
 
-// set timescale for 1ns with 100ps precision.
-`timescale 1ns / 100ps
-
 //
 // Gigatron Shell
 //
@@ -121,6 +118,8 @@ module Gigatron_Shell (
     output [1:0] red,
     output [1:0] green,
     output [1:0] blue,
+	 output hblank,
+	 output vblank,
 
     // Write output to external framebuffer
     output        framebuffer_write_clock,
@@ -225,6 +224,8 @@ module Gigatron_Shell (
     .red(red),
     .green(green),
     .blue(blue),
+	 .hblank(hblank),
+	 .vblank(vblank),
 
     //
     // Write output to external framebuffer

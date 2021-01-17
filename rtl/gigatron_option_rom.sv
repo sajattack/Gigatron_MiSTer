@@ -1,7 +1,5 @@
 
 // set timescale for 1ns with 100ps precision.
-`timescale 1ns / 100ps
-
 //
 // See MENLO_COPYRIGHT.TXT for the copyright notice for this file.
 //

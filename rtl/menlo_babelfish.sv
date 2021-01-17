@@ -14,9 +14,6 @@
 // and re-distributed along with these files.
 //
 
-// set timescale for 1ns with 100ps precision.
-`timescale 1ns / 100ps
-
 //
 // Gigatron BabelFish protocol implemented in System Verilog modeled
 // on RDMA.
