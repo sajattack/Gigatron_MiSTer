@@ -233,6 +233,7 @@ wire HBlank;
 wire VBlank;
 wire ce_pix;
 reg loader_go;
+wire [1:0] red, green, blue;
 
 assign ce_pix = 1'b1;
 
@@ -278,11 +279,11 @@ wire [7:0] gigatron_output_port;
 
     .vsync_n(vsync_n),
 
-//    .red(VGA_R),
-//
-//    .green(VGA_G),
-//
-//    .blue(VGA_B),
+    .red(red),
+
+    .green(green),
+
+    .blue(blue),
 
     .hblank(HBlank),
 
@@ -369,9 +370,9 @@ assign CE_PIXEL = ce_pix;
 
 assign VGA_DE = ~(HBlank | VBlank);
 
-assign VGA_R = gigatron_output_port[1:0];
-assign VGA_G = gigatron_output_port[3:2];
-assign VGA_B = gigatron_output_port[5:4];
+assign VGA_R = {red, red, red, red};
+assign VGA_G = {green, green, green, green};
+assign VGA_B = {blue, blue, blue, blue};
 
 
 
