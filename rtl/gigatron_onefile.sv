@@ -751,13 +751,15 @@ module Gigatron_VGA_Handler
   //
 
   parameter VGA_V_FRONT_PORCH = 10'd6;     // This is actually 6 after its clock adjust from 10 in ROMv2.py
-  parameter VGA_V_BACK_PORCH  = 10'd25;    // Top is cut off. So reduce a few lines.
+  //parameter VGA_V_BACK_PORCH  = 10'd25;    // Top is cut off. So reduce a few lines.
   //parameter VGA_V_BACK_PORCH  = 10'd33;  // from ROMv2.py
+  parameter VGA_V_BACK_PORCH = 0;
   
 
   parameter VGA_H_FRONT_PORCH = 10'd16;    // From vga_controller.v
-  parameter VGA_H_BACK_PORCH  = 10'd45;    // To much cut off the side
+  //parameter VGA_H_BACK_PORCH  = 10'd45;    // To much cut off the side
   //parameter VGA_H_BACK_PORCH  = 10'd144; // from vga_controller.v
+  parameter VGA_H_BACK_PORCH = 0;
 
   reg        vga_vsync_arm;
   reg        vga_hsync_arm;
@@ -774,6 +776,7 @@ module Gigatron_VGA_Handler
   reg [9:0]  vga_horizontal_visible_line_index;
 
   parameter VGA_FRAMEBUFFER_MAX_VISIBLE_VERT_SCAN_LINE = 10'd480;
+  reg [9:0] vga_vertical_visible_line_index;
 
   //
   // The total number of horizontal and vertical scan lines is larger
@@ -957,8 +960,8 @@ module Gigatron_VGA_Handler
 
   end // end always posedge vga_clock
 
-  assign hBlank = (vga_horizontal_line_index <= VGA_H_FRONT_PORCH) || (vga_horizontal_line_index > VGA_FRAMEBUFFER_MAX_VISIBLE_HORZ_SCAN_LINE);
-  assign vBlank = (vga_vertical_line_index <= VGA_V_FRONT_PORCH) || (vga_vertical_line_index > VGA_FRAMEBUFFER_MAX_VISIBLE_VERT_SCAN_LINE);
+  assign hBlank = !((vga_horizontal_line_index>VGA_H_BACK_PORCH) & (vga_horizontal_line_index<=VGA_FRAMEBUFFER_MAX_VISIBLE_HORZ_SCAN_LINE));
+  assign vBlank = !((vga_vertical_line_index>VGA_V_BACK_PORCH) & (vga_vertical_line_index<=VGA_FRAMEBUFFER_MAX_VISIBLE_VERT_SCAN_LINE));
 
 endmodule
 
