@@ -214,16 +214,26 @@ hps_io #(.STRLEN($size(CONF_STR)>>3)) hps_io
 ///////////////////////   CLOCKS   ///////////////////////////////
 
 wire clk_sys;
-wire vga_clock;
-wire application_clock;
+wire clk_vid;
+//wire clk_app;
 pll pll
 (
 	.refclk(CLK_50M),
 	.rst(0),
 	.outclk_0(clk_sys),
-	.outclk_1(vga_clock),
-	.outclk_2(application_clock)
+	.outclk_1(clk_vid),
+	//.outclk_2(clk_app)
 );
+
+reg clk_app;
+reg [2:0] clk_app_counter;
+always @(posedge clk_sys) begin
+    clk_app_counter <= clk_app_counter+1;
+    if (clk_app_counter==0) begin
+        clk_app=~clk_app;
+    end
+end
+
 
 wire reset = RESET | status[0]; //| buttons[1];
 
@@ -231,148 +241,90 @@ wire reset = RESET | status[0]; //| buttons[1];
 
 wire HBlank;
 wire VBlank;
-wire ce_pix;
-reg loader_go;
-wire [1:0] red, green, blue;
 
-assign ce_pix = 1'b1;
-
+wire vsync_n;
+wire hsync_n;
+wire [1:0] red;
+wire [1:0] green;
+wire [1:0] blue;
+wire hblank, vblank;
 wire [7:0] gigatron_output_port;
 
- Gigatron_Shell gigatron_shell(
-
+Gigatron_Shell gigatron_shell(
     .fpga_clock(clk_sys), // 50Mhz FPGA clock
-
-    .vga_clock(vga_clock),      // 25Mhz VGA clock from the PLL
-
-    .clock(application_clock), // 6.25Mhz Gigatron clock from the PLL
-
+    .vga_clock(clk_vid),      // 25Mhz VGA clock from the PLL
+    .clock(clk_app), // 6.25Mhz Gigatron clock from the PLL
     .reset(reset),
-
     .run(1'b1),
 
-
-
     .gigatron_output_port(gigatron_output_port),
+    .gigatron_extended_output_port(gigatron_extended_output_port),
+    
+    //
+    // These signals are from the Famicom serial game controller.
+    //
+    .famicom_pulse(famicom_pulse), // output
+    .famicom_latch(famicom_latch), // output
+    .famicom_data(famicom_data),   // input
 
-//    .gigatron_extended_output_port(gigatron_extended_output_port),
-
-//
-
-//    //
-
-//    // These signals are from the Famicom serial game controller.
-
-//    //
-
-//    .famicom_pulse(famicom_pulse), // output
-
-//    .famicom_latch(famicom_latch), // output
-
-//    .famicom_data(famicom_data),   // input
-
-
-
-    // Raw VGA signals from the Gigatron
+    //// Raw VGA signals from the Gigatron
 
     .hsync_n(hsync_n),
-
     .vsync_n(vsync_n),
-
     .red(red),
-
     .green(green),
-
     .blue(blue),
+    .hblank(hblank),
+    .vblank(vblank),
 
-    .hblank(HBlank),
+    ////
+    //// Write output to external framebuffer
+    ////
+    //// Note: Gigatron outputs its 6.25Mhz clock as the clock
+    //// to synchronize these signals.
+    ////
+    //// The output is standard 8 bit true color with RRRGGGBB.
+    ////
+    //// https://en.wikipedia.org/wiki/8-bit_color
+    ////
+    ////    .framebuffer_write_clock(framebuffer_write_clock),
+    ////    .framebuffer_write_signal(framebuffer_write_signal),
+    ////    .framebuffer_write_address(framebuffer_write_address),
+    ////    .framebuffer_write_data(framebuffer_write_data),
 
-    .vblank(VBlank),
+    //// BlinkenLights
+    ////    .led5(gigatron_led5),
+    ////    .led6(gigatron_led6),
+    ////    .led7(gigatron_led7),
+    ////    .led8(gigatron_led8),
 
-
-
-    //
-
-    // Write output to external framebuffer
-
-    //
-
-    // Note: Gigatron outputs its 6.25Mhz clock as the clock
-
-    // to synchronize these signals.
-
-    //
-
-    // The output is standard 8 bit true color with RRRGGGBB.
-
-    //
-
-    // https://en.wikipedia.org/wiki/8-bit_color
-
-    //
-
-//    .framebuffer_write_clock(framebuffer_write_clock),
-
-//    .framebuffer_write_signal(framebuffer_write_signal),
-
-//    .framebuffer_write_address(framebuffer_write_address),
-
-//    .framebuffer_write_data(framebuffer_write_data),
-
-
-
-    // BlinkenLights
-
-//    .led5(gigatron_led5),
-
-//    .led6(gigatron_led6),
-
-//    .led7(gigatron_led7),
-
-//    .led8(gigatron_led8),
-
-
-
-    // 16 bit LPCM audio output from the Gigatron.
-
+    //// 16 bit LPCM audio output from the Gigatron.
     .audio_dac(AUDIO_L),
-
-
-
-//    // Digital volume control with range 0 - 11.
-
+    ////    // Digital volume control with range 0 - 11.
     .digital_volume_control(4'd11),
 
-//
-
-//    // Signals from user interface to select program to load
-
+    //// Signals from user interface to select program to load
     .loader_go(buttons[1]),  // input, true when user select load
-
     .loader_program_select(4'd0)
+    //.loader_active(application_active) // output
+);	
 
-//  .loader_active(application_active) // output
+//////////////////////////////  VIDEO  ////////////////////////////////////
+//assign red = gigatron_output_port[1:0];
+//assign green = gigatron_output_port[3:2];
+//assign blue = gigatron_output_port[5:4];
+//assign hsync_n = gigatron_output_port[6:6];
+//assign vsync_n = gigatron_output_port[7:7];
+assign VGA_R={red,red,red,red};
+assign VGA_G={green,green,green,green};
+assign VGA_B={blue,blue,blue,blue};
 
-  );	
-
-  
-wire hsync_n;
-wire vsync_n;
-assign VGA_HS = ~hsync_n;
 assign VGA_VS = ~vsync_n;
+assign VGA_HS = ~hsync_n;
+assign VGA_DE = ~(hblank|vblank);
+assign CE_PIXEL = 1'b1;
+assign CLK_VIDEO = clk_vid;
 
-
-assign CLK_VIDEO = vga_clock;
-
-assign CE_PIXEL = ce_pix;
-
-
-
-assign VGA_DE = ~(HBlank | VBlank);
-
-assign VGA_R = {red, red, red, red};
-assign VGA_G = {green, green, green, green};
-assign VGA_B = {blue, blue, blue, blue};
 
 
 

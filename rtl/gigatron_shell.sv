@@ -1,5 +1,3 @@
-
-
 // TODO: 10/20/2018
 //
 // Gigagron goes in the weeds when BabelFish is activated.
@@ -224,8 +222,8 @@ module Gigatron_Shell (
     .red(red),
     .green(green),
     .blue(blue),
-	 .hblank(hblank),
-	 .vblank(vblank),
+    .hblank(hblank),
+    .vblank(vblank),
 
     //
     // Write output to external framebuffer

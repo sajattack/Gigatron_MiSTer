@@ -348,7 +348,7 @@ module menlo_babelfish_rdma_transmitter
           // start next page read
 
           // Advance the  ROM by the data just sent from the current page.
-          reg_rom_address <= reg_rom_address + reg_current_page_remote_length;
+          reg_rom_address <= reg_rom_address + {7'b0, reg_current_page_remote_length};
 
           loader_state <= SEND_PAGE;
         end
@@ -393,6 +393,9 @@ module menlo_babelfish_rdma_transmitter
             reg_request_ack <= 1'b0;
             loader_state <= SEND_IDLE;
           end
+        end
+        default: begin
+            loader_state <= SEND_IDLE;
         end
 
       endcase
@@ -782,10 +785,10 @@ module menlo_babelfish_rdma_page_transmitter
           // Update the current rom address and the page remote address with
           // what was just transferred in the last frame.
           //
-          reg_rom_address <= reg_rom_address + reg_current_frame_remote_length;
+          reg_rom_address <= reg_rom_address + {8'b0,reg_current_frame_remote_length};
 
           reg_current_frame_remote_address <= reg_current_frame_remote_address + 
-                                              reg_current_frame_remote_length;
+                                              {8'b0, reg_current_frame_remote_length};
 
           //
           // Update the running checksum with the value from the frame.
@@ -1624,7 +1627,7 @@ module menlo_babelfish_rdma_linklayer_byte_transmitter (
           // must be sent before terminating.
           //
           if (reg_bits_counter != 4'b1111) begin
-            reg_output_port <= reg_send_bits_value[reg_bits_counter];
+            reg_output_port <= reg_send_bits_value[reg_bits_counter[2:0]];
             bits_state <= BITS_WAIT_H_PULSE_LOW;
           end
           else begin
@@ -1676,7 +1679,7 @@ module menlo_babelfish_rdma_linklayer_byte_transmitter (
             //
             // Frame start sequence state #2
             //
-            reg_output_port <= reg_send_bits_value[reg_bits_counter];
+            reg_output_port <= reg_send_bits_value[reg_bits_counter[2:0]];
 
             bits_state <= BITS_WAIT_V_LATCH_LOW;
           end

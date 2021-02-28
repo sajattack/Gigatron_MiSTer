@@ -12,8 +12,8 @@ RTL = ../rtl
 V_INC = +incdir+$(RTL) 
 
 V_DEFINE = +define+debug=1 +define+SIMULATION=1
-V_DEFINE += --converge-limit 2000 -Wno-WIDTH -Wno-IMPLICIT -Wno-MODDUP -Wno-UNSIGNED -Wno-CASEINCOMPLETE -Wno-CASEX -Wno-SYMRSVDWORD -Wno-COMBDLY -Wno-INITIALDLY -Wno-BLKANDNBLK -Wno-UNOPTFLAT -Wno-SELRANGE -Wno-CMPCONST -Wno-CASEOVERLAP -Wno-PINMISSING -Wno-MULTIDRIVEN -Wno-LATCH -Wno-UNOPTTHREADS
-V_DEFINE += --threads 3
+#V_DEFINE += --converge-limit 2000 -Wno-WIDTH -Wno-IMPLICIT -Wno-MODDUP -Wno-UNSIGNED -Wno-CASEINCOMPLETE -Wno-CASEX -Wno-SYMRSVDWORD -Wno-COMBDLY -Wno-INITIALDLY -Wno-BLKANDNBLK -Wno-UNOPTFLAT -Wno-SELRANGE -Wno-CMPCONST -Wno-CASEOVERLAP -Wno-PINMISSING -Wno-MULTIDRIVEN -Wno-LATCH -Wno-UNOPTTHREADS
+#V_DEFINE += --threads 8
 
 UNAME_S := $(shell uname -s)
 
@@ -54,7 +54,8 @@ CC_OPT =
 V_SRC = \
         gigatron_verilator.v \
         $(RTL)/gigatron_onefile.sv $(RTL)/gigatron_eeprom_from_file.sv \
-        $(RTL)/gigatron_option_rom.sv $(RTL)/menlo_babelfish.sv $(RTL)/gigatron_shell.sv
+        $(RTL)/gigatron_option_rom.sv $(RTL)/menlo_babelfish.sv $(RTL)/gigatron_shell.sv \
+        $(RTL)/x74xx153.sv $(RTL)/spram.sv
 
 
 C_SRC = \

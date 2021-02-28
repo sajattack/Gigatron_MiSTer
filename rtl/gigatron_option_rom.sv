@@ -10,7 +10,7 @@
 module Gigatron_option_rom
 (
        input [3:0] option_select,
-       input [15:0] address,
+       input [14:0] address,
        output reg [7:0] data
 );
 

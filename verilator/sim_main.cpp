@@ -259,19 +259,19 @@ uint32_t *bios_ptr = (uint32_t *) malloc(bios_size);
 unsigned int cart_size = 1024 * 1024 * 4;		// 16MB. (32-bit wide).
 uint32_t *cart_ptr = (uint32_t *)malloc(cart_size);
 
-unsigned int ram_size = 1024 * 512 * 4;		// 2MB. (32-bit wide).
+unsigned int ram_size = 32768;	    //32KB (8-bit wide).	
 uint32_t *ram_ptr = (uint32_t *) malloc(ram_size);
 
 unsigned int vram_size = 1024 * 1024 * 4;	// 4MB. (32-bit wide).
 uint32_t *vram_ptr = (uint32_t *) malloc(vram_size);
 
-#define VGA_WIDTH 1024
-#define VGA_HEIGHT 1024
+#define VGA_WIDTH 640
+#define VGA_HEIGHT 480 
 
-unsigned int disp_size = 1024 * 1024 * 4;	// 4MB. (32-bit wide).
+unsigned int disp_size = VGA_WIDTH * VGA_HEIGHT * 4;	// 4MB. (32-bit wide).
 uint32_t *disp_ptr = (uint32_t *)malloc(disp_size);
 
-uint32_t vga_size  = 1024 * 1024 * 4;		// 4MB. (32-bit wide).
+uint32_t vga_size  = VGA_WIDTH * VGA_HEIGHT * 4;		// 4MB. (32-bit wide).
 uint32_t *vga_ptr  = (uint32_t *) malloc(vga_size);
 
 
@@ -650,27 +650,57 @@ static int clkdiv=3;
 
 	if (!Verilated::gotFinish()) {
 		//while ( top->FL_ADDR < 0x0100 ) {		// Only run for a short time.
-		if (main_time < 48) {
+		if (main_time < 100) {
 			top->reset = 1;   	// Assert reset (active HIGH)
 		}
-		if (main_time == 48) {	// Do == here, so we can still reset it in the main loop.
+		if (main_time == 100) {	// Do == here, so we can still reset it in the main loop.
 			top->reset = 0;		// Deassert reset.
 		}
-		if ((main_time & 1) == 0) {
-//			top->clk_sys = 0;       // Toggle clock
-			if (!clkdiv) {
-			}
-				top->clk_sys=0;
-			top->clk_vid = 0;				
+		top->clk_sys=!top->clk_sys;
+		if (main_time%2==0) {
+		    top->clk_vid=!top->clk_vid;
 		}
-		if ((main_time & 1) == 1) {
-//			top->clk_sys = 1;
-			if (!clkdiv) {
-				clkdiv=3;
-			}
-			clkdiv--;
-			top->clk_sys=1;
-			top->clk_vid = 1;
+		if (top->clk_vid && !top->reset) {
+			pix_count++;
+
+			rgb[0] = top->VGA_B;
+			rgb[1] = top->VGA_G;
+			rgb[2] = top->VGA_R;
+			uint32_t vga_addr = line_count * VGA_WIDTH + pix_count;
+			disp_ptr[vga_addr] = 0xFF000000 | rgb[0] << 16 | rgb[1] << 8 | rgb[2];	// Our debugger framebuffer is in the 32-bit RGBA format.
+
+            if (prev_hsync && !top->VGA_HS) {
+			//if (pix_count > 800) {
+				//printf("Line Count: %d\n", line_count);
+				//printf("Pix count: %d\n", pix_count);
+				line_count++;
+				pix_count = 0;
+                prev_hsync = top->VGA_HS;
+			
+			if (prev_vsync && !top->VGA_VS) {
+			//if (line_count > 525) {
+				frame_count++;
+				line_count = 0;
+				pix_count = 0;
+				sprintf(my_string, "Frame: %06d  VSync! ", frame_count);
+				console.AddLog(my_string);
+			prev_vsync = top->VGA_VS;
+		}
+		//if ((main_time & 1) == 0) {
+//			top->clk_sys = 0;       // Toggle clock
+			//if (!clkdiv) {
+			//}
+            //top->clk_sys=0;
+            //top->clk_vid = 0;				
+		//}
+		//if ((main_time & 1) == 1) {
+////			top->clk_sys = 1;
+			//if (!clkdiv) {
+				//clkdiv=3;
+			//}
+			//clkdiv--;
+			////top->clk_sys=1;
+			////top->clk_vid=1;
 
 #if 0
 			if (top->bus_system_read && top->bus_mem_addr>>2 < bios_size)  {
@@ -698,15 +728,19 @@ static int clkdiv=3;
 				//run_enable = 0;
 			}
 			*/
-#if 0
-			if (top->bus_mem_addr >= 0x02000000 && top->bus_mem_addr <= 0x03FFFFFF && top->gba_top__DOT__bus_write) {
-				ram_ptr[(top->bus_mem_addr&0x00FFFFFF) >> 2] = top->gba_top__DOT__bus_wdata;
-			}
+#if 1
+            if (top->top__DOT__gigatron_shell__DOT__gigatron__DOT__ram__DOT__gigatron_ram_inst__DOT__wren) {
+                ram_ptr[top->top__DOT__gigatron_shell__DOT__gigatron__DOT__ram__DOT__gigatron_ram_inst__DOT__address] = top->top__DOT__gigatron_shell__DOT__gigatron__DOT__ram__DOT__gigatron_ram_inst__DOT__data;
+                printf("Wrote %h to %h", top->top__DOT__gigatron_shell__DOT__gigatron__DOT__ram__DOT__gigatron_ram_inst__DOT__data, top->top__DOT__gigatron_shell__DOT__gigatron__DOT__ram__DOT__gigatron_ram_inst__DOT__address);
+            }
+			//if (top->bus_mem_addr >= 0x02000000 && top->bus_mem_addr <= 0x03FFFFFF && top->gba_top__DOT__bus_write) {
+				//ram_ptr[(top->bus_mem_addr&0x00FFFFFF) >> 2] = top->gba_top__DOT__bus_wdata;
+			//}
 
-			if (top->bus_game_read && top->bus_mem_addr >> 2 < cart_size) {
+			//if (top->bus_game_read && top->bus_mem_addr >> 2 < cart_size) {
 				/*if (top->bus_mem_addr>>2==0x0260>>2 || top->bus_mem_addr>>2==0x0310>>2) top->bus_system_rdata = 0x00000000;	// NOP out some BNEs, which are used loop which clear SDRAM. Help speed up the sim!
-				else*/ top->bus_game_rdata = cart_ptr[top->bus_mem_addr >> 2];	// Read Flash data from our loaded BIOS ROM file.
-			}
+				else*/ //top->bus_game_rdata = cart_ptr[top->bus_mem_addr >> 2];	// Read Flash data from our loaded BIOS ROM file.
+			//}
 #endif
 			//printf("bus_mem_addr>>2: %08X  bus_system_rdata: %08X\n", top->bus_mem_addr>>2<<2, top->bus_system_rdata);
 
@@ -879,23 +913,6 @@ static int clkdiv=3;
 			// AJS // old_hw_addr = top->bus_mem_addr;
 			
 
-			pix_count++;
-
-			// Write VGA output to a file. RAW RGB!
-			rgb[0] = top->VGA_B ;	// GBA core outputs 4 bits per VGA colour channel (12 bpp).
-			rgb[1] = top->VGA_G ;
-			rgb[2] = top->VGA_R ;
-			//fwrite(rgb, 1, 3, vgap);		// Write 24-bit values to the file.
-
-//#define VGA_WIDTH 1024
-//#define VGA_HEIGHT 1024
-			//uint32_t vga_addr = (line_count * 1024) + pix_count;
-			uint32_t vga_addr = ((1024-pix_count) * 1024) +line_count;
-			if (vga_addr <= vga_size) vga_ptr[vga_addr] = (rgb[0] << 16) | (rgb[1] << 8) | (rgb[2] << 0);
-			
-			
-			//disp_ptr[vga_addr] = rgb[0] << 24 | rgb[1] << 16 | rgb[2] << 8;	// Our debugger framebuffer is in the 32-bit RGBA format.
-			disp_ptr[vga_addr] = 0xFF000000 | rgb[0] << 16 | rgb[1] << 8 | rgb[2] ;	// Our debugger framebuffer is in the 32-bit RGBA format.
 			//fprintf(stderr,"vga_addr: %d %d %d %x\n",vga_addr,line_count,pix_count,disp_ptr[vga_addr]);
 			//fprintf(stderr,"vga: %x %x %x\n",rgb[0],rgb[1],rgb[1]);
 
@@ -941,18 +958,7 @@ static int clkdiv=3;
 			}
 			*/
 
-			if (prev_hsync && !top->VGA_HS) {
-				//printf("Line Count: %d\n", line_count);
-				//printf("Pix count: %d\n", pix_count);
-				line_count++;
-				pix_count = 0;
-			}
-			prev_hsync = top->VGA_HS;
 			
-			if (prev_vsync && !top->VGA_VS) {
-				frame_count++;
-				line_count = 0;
-				sprintf(my_string, "Frame: %06d  VSync! ", frame_count); console.AddLog(my_string);
 				
 				//if (frame_count > 46) {
 #if 0
@@ -988,7 +994,6 @@ static int clkdiv=3;
 
 				//printf("pc: %08X  addr: %08X  inst: %08X\n", top->pc << 2, top->bus_mem_addr, top->inst);
 			}
-			prev_vsync = top->VGA_VS;
 
 			//if (top->VGA_we==1) printf("VGA_we is High!\n");
 
@@ -998,20 +1003,20 @@ static int clkdiv=3;
 
 
     if (top->clk_sys ) {
-        //ioctl_upload_before_eval();
-        //ioctl_download_before_eval();
+        ioctl_upload_before_eval();
+        ioctl_download_before_eval();
     }
     else if (ioctl_file)
         printf("skipping download this cycle %d\n",top->clk_sys);
 
 
 
-		top->eval();            // Evaluate model!
+    top->eval();            // Evaluate model!
 
-	if (top->clk_sys ) {
+	if (top->clk_sys) {
 		ioctl_upload_after_eval();
 		ioctl_download_after_eval();
-		}
+    }
 
 
 
@@ -1235,16 +1240,13 @@ int main(int argc, char** argv, char** env) {
 	ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
 
-	// Build texture atlas
-	int width = 1024;
-	int height = 512;
 
 #ifdef WINDOWS
 	// Upload texture to graphics system
 	D3D11_TEXTURE2D_DESC desc;
 	ZeroMemory(&desc, sizeof(desc));
-	desc.Width = width;
-	desc.Height = height;
+	desc.Width = VGA_WIDTH;
+	desc.Height = VGA_HEIGHT;
 	desc.MipLevels = 1;
 	desc.ArraySize = 1;
 	desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -1429,17 +1431,17 @@ int main(int argc, char** argv, char** env) {
 		//ImGui::PlotLines("Lines", values, IM_ARRAYSIZE(values), values_offset, "sample", -1.0f, 1.0f, ImVec2(0, 80));
 		if (ImGui::Button("RESET")) {
 		    main_time = 0;
-		    //top->reset = 1;
-		} else {
-		    top->reset = 0;
-		}
-		if (ImGui::Button("LOAD HI CONFIG")) start_load_rom();
-		ImGui::SameLine(); if (ImGui::Button("SAVE HI")) start_save_vram();
-		ImGui::SameLine(); if (ImGui::Button("LOAD HI")) start_load_vram();
+		    top->reset = 1;
+		}// else {
+		    //top->reset = 0;
+		//}
+		//if (ImGui::Button("LOAD HI CONFIG")) start_load_rom();
+		//ImGui::SameLine(); if (ImGui::Button("SAVE HI")) start_save_vram();
+		//ImGui::SameLine(); if (ImGui::Button("LOAD HI")) start_load_vram();
 		ImGui::Text("main_time %d", main_time);
 		ImGui::Text("frame_count: %d  line_count: %d", frame_count, line_count);
-		// AJS // ImGui::Text("Addr:   0x%08X", top->bus_mem_addr);
-		//ImGui::Text("PC:     0x%08X", top->pc << 2);
+		ImGui::Text("Addr:   0x%08X", top->top__DOT__gigatron_shell__DOT__gigatron__DOT__ram__DOT__gigatron_ram_inst__DOT__address);
+		ImGui::Text("PC:     0x%08X", top->top__DOT__gigatron_shell__DOT__gigatron__DOT__cpu__DOT__PC);
 		//ImGui::Text("Inst:   0x%08X", top->system_top__DOT__core__DOT__InstMem_In);
 
 		/*if (ImGui::Button("Reset!")) 
@@ -1463,15 +1465,15 @@ int main(int argc, char** argv, char** env) {
 			multi_step = 1;
 		}
 		ImGui::SameLine(); ImGui::SliderInt("Step amount", &multi_step_amount, 8, 1024);
-		ImGui::Text("Last SDRAM WRITE. byte_addr: 0x%08X  write_data: 0x%08X  data_ben: 0x%01X\n", last_sdram_byteaddr, last_sdram_writedata, last_sdram_ben);	//  Note sd_data_i is OUT of the sim!
+//		ImGui::Text("Last SDRAM WRITE. byte_addr: 0x%08X  write_data: 0x%08X  data_ben: 0x%01X\n", last_sdram_byteaddr, last_sdram_writedata, last_sdram_ben);	//  Note sd_data_i is OUT of the sim!
 
 		//ImGui::Image(my_tex_id, ImVec2(width, height), ImVec2(0, 0), ImVec2(1, 1), ImColor(255, 255, 255, 255), ImColor(255, 255, 255, 128));
-		ImGui::Image(my_tex_id, ImVec2(width, height));
+		ImGui::Image(my_tex_id, ImVec2(VGA_WIDTH, VGA_HEIGHT));
 		ImGui::End();
 
 
-#if 0
-		ImGui::Begin("RAM Editor - Offset is 0x02000000");
+#if 1
+		ImGui::Begin("RAM Editor");
 		ImGui::Checkbox("Follow Writes", &follow_writes);
 		// AJS // if (follow_writes) write_address = (top->bus_mem_addr & 0x00FFFFFF) >> 2;
 		mem_edit_1.DrawContents(ram_ptr, ram_size, 0);
@@ -1501,7 +1503,7 @@ int main(int argc, char** argv, char** env) {
 		// Update the texture!
 		// D3D11_USAGE_DEFAULT MUST be set in the texture description (somewhere above) for this to work.
 		// (D3D11_USAGE_DYNAMIC is for use with map / unmap.) ElectronAsh.
-		g_pd3dDeviceContext->UpdateSubresource(pTexture, 0, NULL, disp_ptr, width * 4, 0);
+		g_pd3dDeviceContext->UpdateSubresource(pTexture, 0, NULL, disp_ptr, VGA_WIDTH * 4, 0);
 
 		// Rendering
 		ImGui::Render();

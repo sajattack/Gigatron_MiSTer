@@ -63,9 +63,10 @@ module Gigatron_EEPROM
 
     if (cs == 1'b1) begin
       data = reg_eeprom[address];
+      //$display("ROM: addr: %h data:%h", address, data);
     end
     else begin
-      data = 8'bz;
+      data = 16'bz;
     end
 
   end // end always address

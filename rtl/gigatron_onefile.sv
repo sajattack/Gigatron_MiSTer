@@ -174,7 +174,7 @@ module Gigatron_Audio_Handler
   reg [3:0] translated;
 
   always_comb begin
-    output_audio_dac <= translated << digital_volume_control;
+    output_audio_dac = {12'b0, translated << digital_volume_control};
   end
 
   //
@@ -330,7 +330,7 @@ module Gigatron_Loader
   // Option ROM
   Gigatron_option_rom option_rom (
     .option_select(loader_program_select),
-    .address(rom_address),
+    .address(rom_address[14:0]),
     .data(rom_data)
   );
 
@@ -587,8 +587,8 @@ module Gigatron_VGA_Handler
     output [1:0] raw_output_red,
     output [1:0] raw_output_green,
     output [1:0] raw_output_blue,
-	 output hBlank,
-	 output vBlank,
+    output hBlank,
+    output vBlank,
 
     // Write output to external framebuffer
     output        output_framebuffer_write_clock,
@@ -751,15 +751,15 @@ module Gigatron_VGA_Handler
   //
 
   parameter VGA_V_FRONT_PORCH = 10'd6;     // This is actually 6 after its clock adjust from 10 in ROMv2.py
-  //parameter VGA_V_BACK_PORCH  = 10'd25;    // Top is cut off. So reduce a few lines.
+  parameter VGA_V_BACK_PORCH  = 10'd25;    // Top is cut off. So reduce a few lines.
   //parameter VGA_V_BACK_PORCH  = 10'd33;  // from ROMv2.py
-  parameter VGA_V_BACK_PORCH = 0;
+  //parameter VGA_V_BACK_PORCH = 0;
   
 
   parameter VGA_H_FRONT_PORCH = 10'd16;    // From vga_controller.v
-  //parameter VGA_H_BACK_PORCH  = 10'd45;    // To much cut off the side
+  parameter VGA_H_BACK_PORCH  = 10'd45;    // To much cut off the side
   //parameter VGA_H_BACK_PORCH  = 10'd144; // from vga_controller.v
-  parameter VGA_H_BACK_PORCH = 0;
+  //parameter VGA_H_BACK_PORCH = 0;
 
   reg        vga_vsync_arm;
   reg        vga_hsync_arm;
@@ -995,8 +995,8 @@ module Gigatron
     output [1:0] red,
     output [1:0] green,
     output [1:0] blue,
-	 output hblank,
-	 output vblank,
+    output hblank,
+    output vblank,
 
     // Write output to external framebuffer
     output        framebuffer_write_clock,
@@ -1037,6 +1037,7 @@ module Gigatron
 
   wire [14:0] ram_address;
   wire [7:0]  ram_data;
+  wire [7:0]  ram_read_data;
   wire        ram_cs;
   wire        ram_oe;
   wire        ram_write;
@@ -1045,6 +1046,7 @@ module Gigatron
     .clock(fpga_clock),
     .address(ram_address),
     .data(ram_data),
+    .read_data(ram_read_data),
     .cs(ram_cs),
     .oe(ram_oe),
     .write(ram_write) // input
@@ -1068,8 +1070,8 @@ module Gigatron
     .raw_output_red(red),
     .raw_output_green(green),
     .raw_output_blue(blue),
-	 .hBlank(hblank),
-	 .vBlank(vblank),
+    .hBlank(hblank),
+    .vBlank(vblank),
     .output_framebuffer_write_clock(framebuffer_write_clock),
     .output_framebuffer_write_signal(framebuffer_write_signal),
     .output_framebuffer_write_address(framebuffer_write_address),
@@ -1151,6 +1153,7 @@ module Gigatron
     // Ram signals
     .ram_address(ram_address),
     .ram_data(ram_data),
+    .ram_read_data(ram_read_data),
     .ram_cs(ram_cs),
     .ram_oe(ram_oe),
     .ram_write(ram_write), // output
@@ -1189,7 +1192,8 @@ module Gigatron_CPU
 
     // RAM
     output [14:0 ]     ram_address,
-    inout [7:0]        ram_data,
+    output [7:0]       ram_data,
+    input [7:0]        ram_read_data,
     output reg         ram_cs,
     output reg         ram_oe,
     output reg         ram_write,
@@ -1515,7 +1519,7 @@ module Gigatron_CPU
   assign bus = (de_n == 1'b0) ? D : 8'hZZ;
 
   // Enable RAM data bus
-  assign bus = (oe_n == 1'b0) ? ram_data : 8'hZZ;
+  assign bus = (oe_n == 1'b0) ? ram_read_data : 8'hZZ;
 
   // Assign AC to bus when enabled
   assign bus = (ae_n == 1'b0) ? AC : 8'hZZ;
@@ -3371,29 +3375,34 @@ module Gigatron_RAM_Wrapper
 (
     input clock,
     input [14:0] address,
-    inout [7:0] data,
+    input [7:0] data,
+    output [7:0] read_data,
     input cs,
     input oe,
     input write
 );
+
+//always @(posedge clock) begin
+    //$display("addr: %h data: %h q: %h cs: %b oe: %b write: %b", address, data, read_data, cs, oe, write);
+//end
 
   //
   // Use Altera RAM IP block since use registers is being overloaded
   // resulting in compilation failures.
   //
 
-  wire [7:0] read_data;
-
   // Handle input/output/tristate on data out
-  assign data = (cs && oe && !write) ? read_data : 8'bz;
+  //assign data = (cs && oe && !write) ? read_data : 8'bz;
 
-  /*gigatron_ram	gigatron_ram_inst (
+`ifdef ALTERA_RESERVED_QIS
+    gigatron_ram	gigatron_ram_inst (
     .address (address),
     .clock (clock),
     .data (data),  // RAM write data
     .wren (write),
     .q (read_data) // RAM read data
-    );*/
+    );
+`else
   spram #(
       .addr_width(15), 
       .data_width(8)
@@ -3405,76 +3414,77 @@ module Gigatron_RAM_Wrapper
     .q(read_data),
     .cs(cs)
   );
+`endif
 
 
-`ifdef broken_overloads_registers
+//`ifdef broken_overloads_registers
 
-  reg [7:0] reg_data_out;
+  //reg [7:0] reg_data_out;
 
-  // The memory is 32k x 8
-  //  width     depth
-  reg [7:0] mem [0:32767];
+  //// The memory is 32k x 8
+  ////  width     depth
+  //reg [7:0] mem [0:32767];
 
-  //
-  // This is to allow the testbench/ModelSim to see initialized
-  // memory. It will model a read of an uninitialized state as an
-  // unknown and track it throughout the design. This ends up turning
-  // an early uninitialized RAM read in the Gigatron EEPROM into a whole
-  // series of unknowns throughout the Gigatron registers, etc, and
-  // the whole simulation falls apart at that point since none of
-  // the further instructions logical instructions have any valid
-  // results. Example: Read uninitialized memory location $00 into
-  // ACC, and now ACC becomes unknown. As this value is placed on
-  // the bus, input to ALU operations and stored in other registers
-  // you end up with an increasing number of signals that are now
-  // "unknown" in the simulation. They are marked as red in ModelSim
-  // as opposed to blue which is Verilog logic asserted tri-state.
-  //
-  // It appears the uninitialized memory read is on purpose to
-  // get "entropy" from the RAM.
-  //
-  // The file here is all 00's in order to not have entropy, but
-  // reproducable simulations.
-  //
-  // TODO: Using the Altera IP RAM block allows it to automatically clear it.
-  //
-  initial begin
-    $readmemh("C:/Dropbox/embedded/altera/workspace/menlo_gigatron_de10_nano/RAMv1_verilog_data.txt", mem);
-  end
+  ////
+  //// This is to allow the testbench/ModelSim to see initialized
+  //// memory. It will model a read of an uninitialized state as an
+  //// unknown and track it throughout the design. This ends up turning
+  //// an early uninitialized RAM read in the Gigatron EEPROM into a whole
+  //// series of unknowns throughout the Gigatron registers, etc, and
+  //// the whole simulation falls apart at that point since none of
+  //// the further instructions logical instructions have any valid
+  //// results. Example: Read uninitialized memory location $00 into
+  //// ACC, and now ACC becomes unknown. As this value is placed on
+  //// the bus, input to ALU operations and stored in other registers
+  //// you end up with an increasing number of signals that are now
+  //// "unknown" in the simulation. They are marked as red in ModelSim
+  //// as opposed to blue which is Verilog logic asserted tri-state.
+  ////
+  //// It appears the uninitialized memory read is on purpose to
+  //// get "entropy" from the RAM.
+  ////
+  //// The file here is all 00's in order to not have entropy, but
+  //// reproducable simulations.
+  ////
+  //// TODO: Using the Altera IP RAM block allows it to automatically clear it.
+  ////
+  ////initial begin
+    ////$readmemh("RAMv1_verilog_data.txt", mem);
+  ////end
 
-  // Handle input/output/tristate on data out
-  assign data = (cs && oe && !write) ? reg_data_out : 8'bz;
+  //// Handle input/output/tristate on data out
+  //assign data = (cs && oe && !write) ? reg_data_out : 8'bz;
 
-  //
-  // Memory write process
-  //
+  ////
+  //// Memory write process
+  ////
 
-  always @ (address or data or cs or write) begin
-    if (cs && write) begin
-      mem[address] = data;
-    end
-  end // always write
+  //always @ (address or data or cs or write) begin
+    //if (cs && write) begin
+      //mem[address] = data;
+    //end
+  //end // always write
 
-  //
-  // Memory read process
-  //
-  // Note the sensitivity list includes write since the
-  // evaluation must be done when write transitions so that
-  // read does not interface with writes.
-  //
+  ////
+  //// Memory read process
+  ////
+  //// Note the sensitivity list includes write since the
+  //// evaluation must be done when write transitions so that
+  //// read does not interface with writes.
+  ////
 
-  always @ (address or cs or write or oe) begin
+  //always @ (address or cs or write or oe) begin
 
-    if (cs && !write && oe) begin
-      reg_data_out = mem[address];
-    end
-    else begin
-      reg_data_out = 8'h00;
-    end
+    //if (cs && !write && oe) begin
+      //reg_data_out = mem[address];
+    //end
+    //else begin
+      //reg_data_out = 8'h00;
+    //end
 
-  end // always read
+  //end // always read
 
-`endif // broken_overloads_registers
+//`endif // broken_overloads_registers
 
 endmodule
 
@@ -3582,6 +3592,8 @@ module tb_gigatron();
     .red(red),
     .green(green),
     .blue(blue),
+    .hblank(hblank),
+    .vblank(vblank),
 
     // Write output to external framebuffer
     .framebuffer_write_clock(framebuffer_write_clock),
@@ -3596,7 +3608,8 @@ module tb_gigatron();
     .led8(led8),
 
     // 4 bit Audio DAC
-    .audio_dac(audio_dac) // extended_output_port bits 7-4
+    .audio_dac(audio_dac), // extended_output_port bits 7-4
+    .digital_volume_control(digital_volume_control) 
   );
 
   // Set initial values
