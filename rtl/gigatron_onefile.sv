@@ -3387,23 +3387,24 @@ module Gigatron_RAM_Wrapper
   // Handle input/output/tristate on data out
   assign data = (cs && oe && !write) ? read_data : 8'bz;
 
-  gigatron_ram	gigatron_ram_inst (
-	.address (address),
-	.clock (clock),
-	.data (data),  // RAM write data
-	.wren (write),
-	.q (read_data) // RAM read data
-	);
-//  spram #(
-//      .addr_width(15), 
-//      .data_width(8)
-//  ) gigatron_ram_inst (
-//    .address(address),
-//    .clock(clock),
-//    .data(data),
-//    .wren(write),
-//    .q(read_data)
-//  );
+  /*gigatron_ram	gigatron_ram_inst (
+    .address (address),
+    .clock (clock),
+    .data (data),  // RAM write data
+    .wren (write),
+    .q (read_data) // RAM read data
+    );*/
+  spram #(
+      .addr_width(15), 
+      .data_width(8)
+  ) gigatron_ram_inst (
+    .address(address),
+    .clock(clock),
+    .data(data),
+    .wren(write),
+    .q(read_data),
+    .cs(cs)
+  );
 
 
 `ifdef broken_overloads_registers
