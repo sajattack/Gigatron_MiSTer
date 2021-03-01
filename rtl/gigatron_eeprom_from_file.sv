@@ -56,7 +56,10 @@ module Gigatron_EEPROM
 //    $readmemh("application_gigatron/ROMv1_verilog_data.txt", reg_eeprom);
 
     // ROMv2
-    $readmemh("ROMv2_verilog_data.txt", reg_eeprom);
+    //$readmemh("ROMv2_verilog_data.txt", reg_eeprom);
+
+    // ROMv5a
+    $readmemh("ROMv5a_verilog_data.txt", reg_eeprom);
   end
 
   always @ (cs or address) begin

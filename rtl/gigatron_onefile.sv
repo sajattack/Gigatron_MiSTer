@@ -328,11 +328,11 @@ module Gigatron_Loader
   wire [7:0] rom_data;
 
   // Option ROM
-  Gigatron_option_rom option_rom (
-    .option_select(loader_program_select),
-    .address(rom_address[15:0]),
-    .data(rom_data)
-  );
+  //Gigatron_option_rom option_rom (
+    //.option_select(loader_program_select),
+    //.address(rom_address[15:0]),
+    //.data(rom_data)
+  //);
 
   // BabelFish loader
   menlo_babelfish_rdma_transmitter babelfish (
@@ -587,8 +587,8 @@ module Gigatron_VGA_Handler
     output [1:0] raw_output_red,
     output [1:0] raw_output_green,
     output [1:0] raw_output_blue,
-    //output hBlank,
-    //output vBlank,
+    output hBlank,
+    output vBlank,
 
     // Write output to external framebuffer
     output        output_framebuffer_write_clock,
@@ -751,12 +751,14 @@ module Gigatron_VGA_Handler
   //
 
   parameter VGA_V_FRONT_PORCH = 10'd6;     // This is actually 6 after its clock adjust from 10 in ROMv2.py
+  //parameter VGA_V_FRONT_PORCH = 10'd10;     
   parameter VGA_V_BACK_PORCH  = 10'd25;    // Top is cut off. So reduce a few lines.
   //parameter VGA_V_BACK_PORCH  = 10'd33;  // from ROMv2.py
   //parameter VGA_V_BACK_PORCH = 0;
   
 
   parameter VGA_H_FRONT_PORCH = 10'd16;    // From vga_controller.v
+  //parameter VGA_H_FRONT_PORCH = 10'd0;
   parameter VGA_H_BACK_PORCH  = 10'd45;    // To much cut off the side
   //parameter VGA_H_BACK_PORCH  = 10'd144; // from vga_controller.v
   //parameter VGA_H_BACK_PORCH = 0;
@@ -960,8 +962,8 @@ module Gigatron_VGA_Handler
 
   end // end always posedge vga_clock
 
-  //assign hBlank = !((vga_horizontal_line_index>VGA_H_BACK_PORCH) & (vga_horizontal_line_index<=VGA_FRAMEBUFFER_MAX_VISIBLE_HORZ_SCAN_LINE));
-  //assign vBlank = !((vga_vertical_line_index>VGA_V_BACK_PORCH) & (vga_vertical_line_index<=VGA_FRAMEBUFFER_MAX_VISIBLE_VERT_SCAN_LINE));
+  assign hBlank = !((vga_horizontal_line_index>VGA_H_BACK_PORCH) & (vga_horizontal_line_index<=VGA_FRAMEBUFFER_MAX_VISIBLE_HORZ_SCAN_LINE));
+  assign vBlank = !((vga_vertical_line_index>VGA_V_BACK_PORCH) & (vga_vertical_line_index<=VGA_FRAMEBUFFER_MAX_VISIBLE_VERT_SCAN_LINE));
 
 endmodule
 
@@ -995,8 +997,8 @@ module Gigatron
     output [1:0] red,
     output [1:0] green,
     output [1:0] blue,
-    //output hblank,
-    //output vblank,
+    output hblank,
+    output vblank,
 
     // Write output to external framebuffer
     output        framebuffer_write_clock,
@@ -1070,8 +1072,8 @@ module Gigatron
     .raw_output_red(red),
     .raw_output_green(green),
     .raw_output_blue(blue),
-    //.hBlank(hblank),
-    //.vBlank(vblank),
+    .hBlank(hblank),
+    .vBlank(vblank),
     .output_framebuffer_write_clock(framebuffer_write_clock),
     .output_framebuffer_write_signal(framebuffer_write_signal),
     .output_framebuffer_write_address(framebuffer_write_address),
@@ -3592,8 +3594,8 @@ module tb_gigatron();
     .red(red),
     .green(green),
     .blue(blue),
-    //.hblank(hblank),
-    //.vblank(vblank),
+    .hblank(hblank),
+    .vblank(vblank),
 
     // Write output to external framebuffer
     .framebuffer_write_clock(framebuffer_write_clock),

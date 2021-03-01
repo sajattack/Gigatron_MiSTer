@@ -32,7 +32,7 @@ ifeq ($(UNAME_S), Linux) #LINUX
 	LIBS += -lGL -ldl `sdl2-config --libs`
 
 	CXXFLAGS += `sdl2-config --cflags`
-	CFLAGS = "$(CXXFLAGS) -g"
+	CFLAGS = $(CXXFLAGS)
 endif
 
 ifeq ($(findstring MINGW,$(UNAME_S)),MINGW)

@@ -37,8 +37,8 @@ module top(VGA_R,VGA_B,VGA_G,VGA_HS,VGA_VS,reset,clk_sys,clk_vid,clk_app,ioctl_u
         //clk_app=~clk_app;
     //end
 //end
-//wire reset_n;
 
+//wire reset_n;
 //Reset_Delay reset_generator(
     //.iCLK(clk_sys),
     //.oRESET(reset_n) // output
@@ -144,8 +144,8 @@ Gigatron_Shell gigatron_shell(
 
     //// Raw VGA signals from the Gigatron
 
-    //.hsync_n(hsync_n),
-    //.vsync_n(vsync_n),
+    .hsync_n(hsync_n),
+    .vsync_n(vsync_n),
     .red(red),
     .green(green),
     .blue(blue),
@@ -191,8 +191,8 @@ wire [15:0] AUDIO_R = AUDIO_L;
 //assign red = gigatron_output_port[1:0];
 //assign green = gigatron_output_port[3:2];
 //assign blue = gigatron_output_port[5:4];
-assign hsync_n = gigatron_output_port[6:6];
-assign vsync_n = gigatron_output_port[7:7];
+//assign hsync_n = gigatron_output_port[6:6];
+//assign vsync_n = gigatron_output_port[7:7];
 assign VGA_R={red,red,red,red};
 assign VGA_G={green,green,green,green};
 assign VGA_B={blue,blue,blue,blue};
