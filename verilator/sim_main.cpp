@@ -245,20 +245,6 @@ double sc_time_stamp () {	// Called by $time in Verilog.
 ImVector<char*>       Items;
 static char* Strdup(const char *str) { size_t len = strlen(str) + 1; void* buf = malloc(len); IM_ASSERT(buf); return (char*)memcpy(buf, (const void*)str, len); }
 
-#if 0
-void    AddLog(const char* fmt, ...) IM_FMTARGS(2)
-{
-	// FIXME-OPT
-	char buf[1024];
-	va_list args;
-	va_start(args, fmt);
-	vsnprintf(buf, IM_ARRAYSIZE(buf), fmt, args);
-	buf[IM_ARRAYSIZE(buf) - 1] = 0;
-	va_end(args);
-	Items.push_back(Strdup(buf));
-}
-#endif
-
 // Demonstrate creating a simple console window, with scrolling, filtering, completion and history.
 // For the console example, here we are using a more C++ like approach of declaring a class to hold the data and the functions.
 struct ExampleAppConsole
@@ -952,8 +938,11 @@ int main(int argc, char** argv, char** env) {
 		}
 		ImGui::Text("main_time %d", main_time);
 		ImGui::Text("frame_count: %d  line_count: %d", frame_count, line_count);
-		ImGui::Text("Addr:   0x%08X", top->top__DOT__gigatron_shell__DOT__gigatron__DOT__ram__DOT__gigatron_ram_inst__DOT__address);
-		ImGui::Text("PC:     0x%08X", top->top__DOT__gigatron_shell__DOT__gigatron__DOT__cpu__DOT__PC);
+		ImGui::Text("Addr:   0x%04X", top->top__DOT__gigatron_shell__DOT__gigatron__DOT__ram__DOT__gigatron_ram_inst__DOT__address);
+		ImGui::Text("PC:     0x%04X", top->top__DOT__gigatron_shell__DOT__gigatron__DOT__cpu__DOT__PC);
+		ImGui::Text("Instruction:     0x%04X", top->top__DOT__gigatron_shell__DOT__gigatron__DOT__eeprom__DOT__data__out__out0);
+		ImGui::Text("HS:     %d", top->top__DOT__VGA_HS);
+		ImGui::Text("VS:     %d", top->top__DOT__VGA_VS);
 
 		ImGui::Checkbox("RUN", &run_enable);
 
