@@ -230,10 +230,12 @@ unsigned char buffer[16];
 unsigned int ram_size = 32768;	    //32KB (8-bit wide).	
 uint32_t *ram_ptr = (uint32_t *) malloc(ram_size);
 
-#define VGA_WIDTH 1024
-#define VGA_HEIGHT 1024
+#define BUF_WIDTH 1024
+#define BUF_HEIGHT 1024
+#define VGA_WIDTH 640
+#define VGA_HEIGHT 480
 
-unsigned int disp_size = VGA_WIDTH * VGA_HEIGHT * 4;
+unsigned int disp_size = BUF_WIDTH * BUF_HEIGHT * 4;
 uint32_t *disp_ptr = (uint32_t *)malloc(disp_size);
 
 
@@ -868,7 +870,7 @@ int main(int argc, char** argv, char** env) {
 
 
 
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 640, 480, 0, GL_RGBA, GL_UNSIGNED_BYTE,disp_ptr);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, VGA_WIDTH, VGA_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE,disp_ptr);
     ImTextureID my_tex_id = (ImTextureID) tex;
 
 
@@ -939,7 +941,7 @@ int main(int argc, char** argv, char** env) {
 		if (ImGui::Button("RESET")) {
 		    main_time = 0;
 		    top->reset = 1;
-		    memset(disp_ptr, 0xaa, VGA_WIDTH*VGA_HEIGHT*4);
+		    memset(disp_ptr, 0xaa, BUF_WIDTH*BUF_HEIGHT*4);
 		    line_count = 0;
 		    pix_count = 0;
 		    //memset(ram_ptr, 0, ram_size);
@@ -966,7 +968,7 @@ int main(int argc, char** argv, char** env) {
 			multi_step = 1;
 		}
 		ImGui::SameLine(); ImGui::SliderInt("Step amount", &multi_step_amount, 8, 1000000);
-		ImGui::Image(my_tex_id, ImVec2(640, 480));
+		ImGui::Image(my_tex_id, ImVec2(VGA_WIDTH, VGA_HEIGHT));
 		ImGui::End();
 
 
@@ -980,7 +982,7 @@ int main(int argc, char** argv, char** env) {
 		// Update the texture!
 		// D3D11_USAGE_DEFAULT MUST be set in the texture description (somewhere above) for this to work.
 		// (D3D11_USAGE_DYNAMIC is for use with map / unmap.) ElectronAsh.
-		g_pd3dDeviceContext->UpdateSubresource(pTexture, 0, NULL, disp_ptr, VGA_WIDTH * 4, 0);
+		g_pd3dDeviceContext->UpdateSubresource(pTexture, 0, NULL, disp_ptr, BUF_WIDTH * 4, 0);
 
 		// Rendering
 		ImGui::Render();
@@ -992,7 +994,7 @@ int main(int argc, char** argv, char** env) {
 		g_pSwapChain->Present(0, 0); // Present without vsync
 #else
 
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 640, 480, 0, GL_RGBA, GL_UNSIGNED_BYTE,disp_ptr);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, VGA_WIDTH, VGA_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE,disp_ptr);
 
         // Rendering
         ImGui::Render();
