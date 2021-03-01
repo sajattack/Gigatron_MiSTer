@@ -116,8 +116,8 @@ module Gigatron_Shell (
     output [1:0] red,
     output [1:0] green,
     output [1:0] blue,
-    output hblank,
-    output vblank,
+    //output hblank,
+    //output vblank,
 
     // Write output to external framebuffer
     output        framebuffer_write_clock,
@@ -222,8 +222,8 @@ module Gigatron_Shell (
     .red(red),
     .green(green),
     .blue(blue),
-    .hblank(hblank),
-    .vblank(vblank),
+    //.hblank(hblank),
+    //.vblank(vblank),
 
     //
     // Write output to external framebuffer

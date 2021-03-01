@@ -32,7 +32,7 @@ ifeq ($(UNAME_S), Linux) #LINUX
 	LIBS += -lGL -ldl `sdl2-config --libs`
 
 	CXXFLAGS += `sdl2-config --cflags`
-	CFLAGS = $(CXXFLAGS)
+	CFLAGS = "$(CXXFLAGS) -g"
 endif
 
 ifeq ($(findstring MINGW,$(UNAME_S)),MINGW)
@@ -40,7 +40,7 @@ ifeq ($(findstring MINGW,$(UNAME_S)),MINGW)
 	LIBS += -lgdi32 -lopengl32 -limm32 `pkg-config --static --libs sdl2`
 
 	CXXFLAGS += `pkg-config --cflags sdl2`
-	CFLAGS = $(CXXFLAGS)
+	CFLAGS = $(CXXFLAGS) 
 endif
 
 CFLAGS += $(CC_OPT) $(CC_DEFINE)

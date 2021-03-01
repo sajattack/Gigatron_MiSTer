@@ -5,10 +5,11 @@
 `define SDL_DISPLAY 
 //`define USE_VGA
 
-module top(VGA_R,VGA_B,VGA_G,VGA_HS,VGA_VS,reset,clk_sys,clk_vid,ioctl_upload,ioctl_download,ioctl_addr,ioctl_dout,ioctl_din,ioctl_index,ioctl_wait,ioctl_wr);
+module top(VGA_R,VGA_B,VGA_G,VGA_HS,VGA_VS,reset,clk_sys,clk_vid,clk_app,ioctl_upload,ioctl_download,ioctl_addr,ioctl_dout,ioctl_din,ioctl_index,ioctl_wait,ioctl_wr);
 
    input clk_sys/*verilator public_flat*/;
    input clk_vid/*verilator public_flat*/;
+   input clk_app/*verilator public_flat*/;
    input reset/*verilator public_flat*/;
 
    output [7:0] VGA_R/*verilator public_flat*/;
@@ -28,14 +29,21 @@ module top(VGA_R,VGA_B,VGA_G,VGA_HS,VGA_VS,reset,clk_sys,clk_vid,ioctl_upload,io
    output  reg  ioctl_wait=1'b0;
    
 
-reg clk_app;
-reg [2:0] clk_app_counter;
-always @(posedge clk_sys) begin
-    clk_app_counter <= clk_app_counter+1;
-    if (clk_app_counter==0) begin
-        clk_app=~clk_app;
-    end
-end
+//reg clk_app;
+//reg [2:0] clk_app_counter;
+//always @(posedge clk_sys) begin
+    //clk_app_counter <= clk_app_counter+1;
+    //if (clk_app_counter==0) begin
+        //clk_app=~clk_app;
+    //end
+//end
+//wire reset_n;
+
+//Reset_Delay reset_generator(
+    //.iCLK(clk_sys),
+    //.oRESET(reset_n) // output
+//);
+//assign reset = ~reset_n;
 
 wire [3:0] led/*verilator public_flat*/;
 
@@ -46,7 +54,7 @@ reg [7:0]  sw2/*verilator public_flat*/;
 reg [9:0]  playerinput/*verilator public_flat*/;
 
    
-   //-------------------------------------------------------------------
+//-------------------------------------------------------------------
 
 //wire cart_download = ioctl_download & (ioctl_index != 8'd0);
 //wire bios_download = ioctl_download & (ioctl_index == 8'd0);
@@ -109,7 +117,7 @@ wire hsync_n;
 wire [1:0] red;
 wire [1:0] green;
 wire [1:0] blue;
-wire hblank, vblank;
+//wire hblank, vblank;
 wire [7:0] gigatron_output_port;
 wire [7:0] gigatron_extended_output_port;
 wire famicom_pulse;
@@ -119,8 +127,8 @@ wire famicom_data;
 // verilator lint_off PINMISSING
 Gigatron_Shell gigatron_shell(
     .fpga_clock(clk_sys), // 50Mhz FPGA clock
-    .vga_clock(clk_vid),      // 25Mhz VGA clock from the PLL
-    .clock(clk_app), // 6.25Mhz Gigatron clock from the PLL
+    .vga_clock(clk_vid),      // 25Mhz VGA clock
+    .clock(clk_app), // 6.25Mhz Gigatron clock
     .reset(reset),
     .run(1'b1),
 
@@ -136,13 +144,13 @@ Gigatron_Shell gigatron_shell(
 
     //// Raw VGA signals from the Gigatron
 
-    .hsync_n(hsync_n),
-    .vsync_n(vsync_n),
+    //.hsync_n(hsync_n),
+    //.vsync_n(vsync_n),
     .red(red),
     .green(green),
     .blue(blue),
-    .hblank(hblank),
-    .vblank(vblank),
+    //.hblank(hblank),
+    //.vblank(vblank),
 
     ////
     //// Write output to external framebuffer
@@ -183,16 +191,34 @@ wire [15:0] AUDIO_R = AUDIO_L;
 //assign red = gigatron_output_port[1:0];
 //assign green = gigatron_output_port[3:2];
 //assign blue = gigatron_output_port[5:4];
-//assign hsync_n = gigatron_output_port[6:6];
-//assign vsync_n = gigatron_output_port[7:7];
+assign hsync_n = gigatron_output_port[6:6];
+assign vsync_n = gigatron_output_port[7:7];
 assign VGA_R={red,red,red,red};
 assign VGA_G={green,green,green,green};
 assign VGA_B={blue,blue,blue,blue};
 
-assign VGA_VS = ~vsync_n;
 assign VGA_HS = ~hsync_n;
+assign VGA_VS = ~vsync_n;
 //assign HBlank = hblank;
 //assign VBlank = vblank;
 //wire ce_pix = 1'b1;
 
 endmodule
+
+
+//module	Reset_Delay(iCLK,oRESET);
+//input		iCLK;
+//output reg	oRESET;
+//reg	[19:0]	Cont;
+
+//always@(posedge iCLK)
+//begin
+    //if(Cont != 20'hFFFFF)
+    //begin
+        //Cont	<=	Cont + 10'h1;
+        //oRESET	<=	1'b0;
+    //end
+    //else
+    //oRESET	<=	1'b1;
+//end
+//endmodule
