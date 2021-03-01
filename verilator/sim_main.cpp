@@ -559,7 +559,6 @@ static ExampleAppConsole console;
 
 static void ShowExampleAppConsole(bool* p_open)
 {
-//	static ExampleAppConsole console;
 	console.Draw("Debug Log", p_open);
 }
 
@@ -569,7 +568,6 @@ int verilate() {
 static int clkdiv=3;
 
 	if (!Verilated::gotFinish()) {
-		//while ( top->FL_ADDR < 0x0100 ) {		// Only run for a short time.
 		if (main_time < 100) {
 			top->reset = 1;   	// Assert reset (active HIGH)
 		}
@@ -590,8 +588,6 @@ static int clkdiv=3;
 			disp_ptr[vga_addr] = 0xFF000000 | rgb[0] << 16 | rgb[1] << 8 | rgb[2];	// Our debugger framebuffer is in the 32-bit RGBA format.
 
             if (prev_hsync && !top->VGA_HS) {
-				//printf("Line Count: %d\n", line_count);
-				//printf("Pix count: %d\n", pix_count);
 				line_count++;
 				pix_count = 0;
                 prev_hsync = top->VGA_HS;
@@ -634,9 +630,9 @@ static int clkdiv=3;
 		return 1;
 	}
 	// Stop Verilating...
-	//top->final();
-	//delete top;
-	//exit(0);
+	top->final();
+	delete top;
+	exit(0);
 	return 0;
 }
 
@@ -739,20 +735,6 @@ void ioctl_download_after_eval()
 if (ioctl_file) printf("ioctl_download_after_eval %x wr %x dl %x %x\n",top->ioctl_addr,top->ioctl_wr,top->ioctl_download,top->ioctl_dout);
 }
 
-void start_save_vram() {
-printf("start save vram");
-  ioctl_upload_setfile("cent.hi",4,30);
-}
-void start_load_vram() {
-printf("load vram here\n");
- ioctl_download_setfile("cent.hi",4);
-
-}
-void start_load_rom() {
-printf("load config here\n");
- ioctl_download_setfile("hi.bin",3);
-}
-
 int my_count = 0;
 
 static MemoryEditor mem_edit_1;
@@ -817,28 +799,10 @@ int main(int argc, char** argv, char** env) {
     ImGui_ImplOpenGL2_Init();
 
 #endif
-	// Load Fonts
-	// - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
-	// - AddFontFromFileTTF() will return the ImFont* so you can store it if you need to select the font among multiple.
-	// - If the file cannot be loaded, the function will return NULL. Please handle those errors in your application (e.g. use an assertion, or display an error and quit).
-	// - The fonts will be rasterized at a given size (w/ oversampling) and stored into a texture when calling ImFontAtlas::Build()/GetTexDataAsXXXX(), which ImGui_ImplXXXX_NewFrame below will call.
-	// - Read 'misc/fonts/README.txt' for more instructions and details.
-	// - Remember that in C/C++ if you want to include a backslash \ in a string literal you need to write a double backslash \\ !
-	//io.Fonts->AddFontDefault();
-	//io.Fonts->AddFontFromFileTTF("../../misc/fonts/Roboto-Medium.ttf", 16.0f);
-	//io.Fonts->AddFontFromFileTTF("../../misc/fonts/Cousine-Regular.ttf", 15.0f);
-	//io.Fonts->AddFontFromFileTTF("../../misc/fonts/DroidSans.ttf", 16.0f);
-	//io.Fonts->AddFontFromFileTTF("../../misc/fonts/ProggyTiny.ttf", 10.0f);
-	//ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, NULL, io.Fonts->GetGlyphRangesJapanese());
-	//IM_ASSERT(font != NULL);
-
 
 	Verilated::commandArgs(argc, argv);
 	
-	//memset(vram_ptr, 0x00, vram_size);
 	memset(disp_ptr, 0xAA, disp_size);
-	//memset(vga_ptr,  0xAA, vga_size);
-
 	memset(ram_ptr, 0x00, ram_size);
 
 
@@ -846,8 +810,6 @@ int main(int argc, char** argv, char** env) {
 	bool show_demo_window = true;
 	bool show_another_window = false;
 	ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
-
-
 
 #ifdef WINDOWS
 	// Upload texture to graphics system
@@ -986,6 +948,7 @@ int main(int argc, char** argv, char** env) {
 		    memset(disp_ptr, 0xaa, VGA_WIDTH*VGA_HEIGHT*4);
 		    line_count = 0;
 		    pix_count = 0;
+		    memset(ram_ptr, 0, ram_size);
 		}
 		ImGui::Text("main_time %d", main_time);
 		ImGui::Text("frame_count: %d  line_count: %d", frame_count, line_count);
@@ -1006,17 +969,12 @@ int main(int argc, char** argv, char** env) {
 			multi_step = 1;
 		}
 		ImGui::SameLine(); ImGui::SliderInt("Step amount", &multi_step_amount, 8, 1024);
-//		ImGui::Text("Last SDRAM WRITE. byte_addr: 0x%08X  write_data: 0x%08X  data_ben: 0x%01X\n", last_sdram_byteaddr, last_sdram_writedata, last_sdram_ben);	//  Note sd_data_i is OUT of the sim!
-
-		//ImGui::Image(my_tex_id, ImVec2(VGA_WIDTH, VGA_HEIGHT), ImVec2(0, 0), ImVec2(1, 1), ImColor(255, 255, 255, 255), ImColor(255, 255, 255, 128));
 		ImGui::Image(my_tex_id, ImVec2(VGA_WIDTH, VGA_HEIGHT));
 		ImGui::End();
 
 
 #if 1
 		ImGui::Begin("RAM Editor");
-		//ImGui::Checkbox("Follow Writes", &follow_writes);
-		// AJS // if (follow_writes) write_address = (top->bus_mem_addr & 0x00FFFFFF) >> 2;
 		mem_edit_1.DrawContents(ram_ptr, ram_size, 0);
 		ImGui::End();
 #endif		
