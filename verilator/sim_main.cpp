@@ -132,32 +132,6 @@ void ioctl_download_after_eval(void);
 void ioctl_upload_before_eval(void);
 void ioctl_upload_after_eval(void);
 
-
-#define VSW1    top->top__DOT__sw1
-#define VSW2    top->top__DOT__sw2
-#define PLAYERINPUT top->top__DOT__playerinput
-#define JS      top->top__DOT__joystick
-void
-js_assert(int s)
-{
-        JS &= ~(1<<s);
-}
-
-void
-js_deassert(int s)
-{
-        JS |= 1<<s;
-}
-void playinput_assert(int s)
-{
-        PLAYERINPUT &= ~(1<<s);
-}
-
-void playinput_deassert(int s)
-{
-        PLAYERINPUT |= (1<<s);
-}
-
 #ifdef WINDOWS
 // Data
 static IDXGISwapChain*          g_pSwapChain = NULL;
@@ -253,35 +227,15 @@ vluint64_t main_time = 0;	// Current simulation time.
 
 unsigned char buffer[16];
 
-unsigned int bios_size = 1024 * 256 * 4;		// 1MB. (32-bit wide).
-uint32_t *bios_ptr = (uint32_t *) malloc(bios_size);
-
-unsigned int cart_size = 1024 * 1024 * 4;		// 16MB. (32-bit wide).
-uint32_t *cart_ptr = (uint32_t *)malloc(cart_size);
-
 unsigned int ram_size = 32768;	    //32KB (8-bit wide).	
 uint32_t *ram_ptr = (uint32_t *) malloc(ram_size);
-
-unsigned int vram_size = 1024 * 1024 * 4;	// 4MB. (32-bit wide).
-uint32_t *vram_ptr = (uint32_t *) malloc(vram_size);
 
 #define VGA_WIDTH 640
 #define VGA_HEIGHT 480 
 
-unsigned int disp_size = VGA_WIDTH * VGA_HEIGHT * 4;	// 4MB. (32-bit wide).
+unsigned int disp_size = VGA_WIDTH * VGA_HEIGHT * 4;
 uint32_t *disp_ptr = (uint32_t *)malloc(disp_size);
 
-uint32_t vga_size  = VGA_WIDTH * VGA_HEIGHT * 4;		// 4MB. (32-bit wide).
-uint32_t *vga_ptr  = (uint32_t *) malloc(vga_size);
-
-
-uint32_t first_cmd_word = 0;
-
-bool bios_rom_loaded = 0;
-bool cart_rom_loaded = 0;
-
-
-uint8_t clk_cnt = 0;
 
 double sc_time_stamp () {	// Called by $time in Verilog.
 	return main_time;
@@ -335,10 +289,9 @@ void    AddLog(const char* fmt, ...) IM_FMTARGS(2)
 		Commands.push_back("HELP");
 		Commands.push_back("HISTORY");
 		Commands.push_back("CLEAR");
-		Commands.push_back("CLASSIFY");  // "classify" is only here to provide an example of "C"+[tab] completing to "CL" and displaying matches.
 		AutoScroll = true;
 		ScrollToBottom = false;
-		AddLog("GBA Core Sim start");
+		AddLog("Gigatron Core Sim start");
 		AddLog("");
 	}
 	~ExampleAppConsole()
@@ -361,20 +314,6 @@ void    AddLog(const char* fmt, ...) IM_FMTARGS(2)
 		Items.clear();
 	}
 
-/*
-	void    AddLog(const char* fmt, ...) IM_FMTARGS(2)
-	{
-		// FIXME-OPT
-		char buf[1024];
-		va_list args;
-		va_start(args, fmt);
-		vsnprintf(buf, IM_ARRAYSIZE(buf), fmt, args);
-		buf[IM_ARRAYSIZE(buf) - 1] = 0;
-		va_end(args);
-		Items.push_back(Strdup(buf));
-	}
-*/
-
 	void    Draw(const char* title, bool* p_open)
 	{
 		ImGui::SetNextWindowSize(ImVec2(520, 600), ImGuiCond_FirstUseEver);
@@ -393,16 +332,8 @@ void    AddLog(const char* fmt, ...) IM_FMTARGS(2)
 			ImGui::EndPopup();
 		}
 
-		//ImGui::TextWrapped("This example implements a console with basic coloring, completion and history. A more elaborate implementation may want to store entries along with extra data such as timestamp, emitter, etc.");
-		//ImGui::TextWrapped("Enter 'HELP' for help, press TAB to use text completion.");
-
-		// TODO: display items starting from the bottom
-
-		//if (ImGui::SmallButton("Add Dummy Text")) { AddLog("%d some text", Items.Size); AddLog("some more text"); AddLog("display very important message here!"); } ImGui::SameLine();
-		//if (ImGui::SmallButton("Add Dummy Error")) { AddLog("[error] something went wrong"); } ImGui::SameLine();
 		if (ImGui::SmallButton("Clear")) { ClearLog(); } ImGui::SameLine();
 		bool copy_to_clipboard = ImGui::SmallButton("Copy");
-		//static float t = 0.0f; if (ImGui::GetTime() - t > 0.02f) { t = ImGui::GetTime(); AddLog("Spam %f", t); }
 
 		ImGui::Separator();
 
@@ -428,17 +359,6 @@ void    AddLog(const char* fmt, ...) IM_FMTARGS(2)
 			ImGui::EndPopup();
 		}
 
-		// Display every line as a separate entry so we can change their color or add custom widgets. If you only want raw text you can use ImGui::TextUnformatted(log.begin(), log.end());
-		// NB- if you have thousands of entries this approach may be too inefficient and may require user-side clipping to only process visible items.
-		// You can seek and display only the lines that are visible using the ImGuiListClipper helper, if your elements are evenly spaced and you have cheap random access to the elements.
-		// To use the clipper we could replace the 'for (int i = 0; i < Items.Size; i++)' loop with:
-		//     ImGuiListClipper clipper(Items.Size);
-		//     while (clipper.Step())
-		//         for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++)
-		// However, note that you can not use this code as is if a filter is active because it breaks the 'cheap random-access' property. We would need random-access on the post-filtered list.
-		// A typical application wanting coarse clipping and filtering may want to pre-compute an array of indices that passed the filtering test, recomputing this array when user changes the filter,
-		// and appending newly elements as they are inserted. This is left as a task to the user until we can manage to improve this example code!
-		// If your items are of variable size you may want to implement code similar to what ImGuiListClipper does. Or split your data into fixed height items to allow random-seeking into your list.
 		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4, 1)); // Tighten spacing
 		if (copy_to_clipboard)
 			ImGui::LogToClipboard();
@@ -670,339 +590,30 @@ static int clkdiv=3;
 			disp_ptr[vga_addr] = 0xFF000000 | rgb[0] << 16 | rgb[1] << 8 | rgb[2];	// Our debugger framebuffer is in the 32-bit RGBA format.
 
             if (prev_hsync && !top->VGA_HS) {
-			//if (pix_count > 800) {
 				//printf("Line Count: %d\n", line_count);
 				//printf("Pix count: %d\n", pix_count);
 				line_count++;
 				pix_count = 0;
                 prev_hsync = top->VGA_HS;
 			
-			if (prev_vsync && !top->VGA_VS) {
-			//if (line_count > 525) {
-				frame_count++;
-				line_count = 0;
-				pix_count = 0;
-				sprintf(my_string, "Frame: %06d  VSync! ", frame_count);
-				console.AddLog(my_string);
-			prev_vsync = top->VGA_VS;
-		}
-		//if ((main_time & 1) == 0) {
-//			top->clk_sys = 0;       // Toggle clock
-			//if (!clkdiv) {
-			//}
-            //top->clk_sys=0;
-            //top->clk_vid = 0;				
-		//}
-		//if ((main_time & 1) == 1) {
-////			top->clk_sys = 1;
-			//if (!clkdiv) {
-				//clkdiv=3;
-			//}
-			//clkdiv--;
-			////top->clk_sys=1;
-			////top->clk_vid=1;
-
-#if 0
-			if (top->bus_system_read && top->bus_mem_addr>>2 < bios_size)  {
-				/*if (top->bus_mem_addr>>2==0x0260>>2 || top->bus_mem_addr>>2==0x0310>>2) top->bus_system_rdata = 0x00000000;	// NOP out some BNEs, which are used loop which clear SDRAM. Help speed up the sim!
-				else*/
-					top->bus_system_rdata = bios_ptr[top->bus_mem_addr>>2];	// Read Flash data from our loaded BIOS ROM file.
-
-				// Byteswap! (32-bit)
-				//uint32_t bios_word = bios_ptr[top->bus_mem_addr >> 2];
-				//top->bus_system_rdata = (bios_word & 0xFF000000) >> 24 | (bios_word & 0x00FF0000) >> 8 | (bios_word & 0x0000FF00) << 8 | (bios_word & 0x000000FF) << 24;
-
-				// Byteswap! (16-bit)
-				//uint32_t bios_word = bios_ptr[top->bus_mem_addr >> 2];
-				//top->bus_system_rdata = (bios_word & 0xFF000000) >> 8 | (bios_word & 0x00FF0000) << 8 | (bios_word & 0x0000FF00) >> 8 | (bios_word & 0x000000FF) << 8;
-			}
-#endif
-			/*
-			else if (top->in_PPORT && top->bus_mem_addr < bios_size) {
-				top->bus_system_rdata = exp_ptr[top->bus_mem_addr];
-				//top->bus_system_rdata = exp_ptr[top->bus_mem_addr>>2];
-				//top->bus_system_rdata = (top->bus_system_rdata & 0xFF000000) >> 8 | (top->bus_system_rdata & 0x00FF0000) << 8 | (top->bus_system_rdata & 0x0000FF00) >> 8 | (top->bus_system_rdata & 0x000000FF) << 8;
-
-				printf("Expansion ROM read, from 0x%08X, data=0x%08X\n", top->bus_mem_addr>>2, top->bus_system_rdata);
-
-				//run_enable = 0;
-			}
-			*/
+                if (prev_vsync && !top->VGA_VS) {
+                    frame_count++;
+                    line_count = 0;
+                    pix_count = 0;
+                    sprintf(my_string, "Frame: %06d  VSync! ", frame_count);
+                    console.AddLog(my_string);
+                    prev_vsync = top->VGA_VS;
+                }
+            }
+        }
 #if 1
             if (top->top__DOT__gigatron_shell__DOT__gigatron__DOT__ram__DOT__gigatron_ram_inst__DOT__wren) {
                 ram_ptr[top->top__DOT__gigatron_shell__DOT__gigatron__DOT__ram__DOT__gigatron_ram_inst__DOT__address] = top->top__DOT__gigatron_shell__DOT__gigatron__DOT__ram__DOT__gigatron_ram_inst__DOT__data;
-                printf("Wrote %h to %h", top->top__DOT__gigatron_shell__DOT__gigatron__DOT__ram__DOT__gigatron_ram_inst__DOT__data, top->top__DOT__gigatron_shell__DOT__gigatron__DOT__ram__DOT__gigatron_ram_inst__DOT__address);
+                //printf("Wrote %x to %x\n", top->top__DOT__gigatron_shell__DOT__gigatron__DOT__ram__DOT__gigatron_ram_inst__DOT__data, top->top__DOT__gigatron_shell__DOT__gigatron__DOT__ram__DOT__gigatron_ram_inst__DOT__address);
             }
-			//if (top->bus_mem_addr >= 0x02000000 && top->bus_mem_addr <= 0x03FFFFFF && top->gba_top__DOT__bus_write) {
-				//ram_ptr[(top->bus_mem_addr&0x00FFFFFF) >> 2] = top->gba_top__DOT__bus_wdata;
-			//}
-
-			//if (top->bus_game_read && top->bus_mem_addr >> 2 < cart_size) {
-				/*if (top->bus_mem_addr>>2==0x0260>>2 || top->bus_mem_addr>>2==0x0310>>2) top->bus_system_rdata = 0x00000000;	// NOP out some BNEs, which are used loop which clear SDRAM. Help speed up the sim!
-				else*/ //top->bus_game_rdata = cart_ptr[top->bus_mem_addr >> 2];	// Read Flash data from our loaded BIOS ROM file.
-			//}
-#endif
-			//printf("bus_mem_addr>>2: %08X  bus_system_rdata: %08X\n", top->bus_mem_addr>>2<<2, top->bus_system_rdata);
-
-			//if (old_pc != top->pc) printf("pc: %08X  inst_read: %d  mdr: %d  mem_addr: %08X  inst: %08X  mem_data_in: %08X  mem_data_out: %08X\n", top->pc<<2, top->inst_read, top->mem_data_read, top->bus_mem_addr<<2, top->inst, top->mem_data_in, top->mem_data_out);
-
-			// This code MUST go BEFORE the SDRAM READ code below!
-			// The PSX core needs to see sd_valid go Low before it will continue the read.
-			// We check ram_read_flag here, then set sd_valid High only after the NEXT tick of CLOCK_50.
-			/*
-			if (ram_read_flag == 1) {
-				ram_read_flag = 0;
-				top->sd_valid = 1;
-				top->sd_waitrequest = 0;
-			}
-
-			if (ram_write_flag == 1) {
-				ram_write_flag = 0;
-				top->sd_waitrequest = 0;
-			}
-
-			if (top->sd_wen) {
-				//if ( top->pc == 0x80059DE0 >> 2 ) ram_ptr[0x001FFD2E >> 2] = 0x0001;	// Cancel out the annoying delay loop.
-
-				if (top->data_ben & 8) ram_ptr[top->sd_addr] = (ram_ptr[top->sd_addr] & 0x00FFFFFF) | (top->sd_data_i & 0xFF000000);
-				if (top->data_ben & 4) ram_ptr[top->sd_addr] = (ram_ptr[top->sd_addr] & 0xFF00FFFF) | (top->sd_data_i & 0x00FF0000);
-				if (top->data_ben & 2) ram_ptr[top->sd_addr] = (ram_ptr[top->sd_addr] & 0xFFFF00FF) | (top->sd_data_i & 0x0000FF00);
-				if (top->data_ben & 1) ram_ptr[top->sd_addr] = (ram_ptr[top->sd_addr] & 0xFFFFFF00) | (top->sd_data_i & 0x000000FF);
-
-				top->sd_waitrequest = 1;
-				ram_write_flag = 1;
-				//printf("SDRAM WRITE. sd_addr: %08X  byte_addr: %08X  data_from_core: %08X  data_ben: %01X\n", top->sd_addr, top->sd_addr<<2, top->sd_data_i, top->data_ben);	//  Note sd_data_i is OUT of the sim!
-
-				last_sdram_writedata = top->sd_data_i;
-				last_sdram_byteaddr  = top->sd_addr << 2;
-				last_sdram_ben       = top->data_ben;
-
-				if (top->sd_addr == 0x0006EE0) {
-					printf("SDRAM WRITE. sd_addr: %08X  byte_addr: %08X  data_from_core: %08X  data_ben: %01X\n", top->sd_addr, top->sd_addr << 2, top->sd_data_i, top->data_ben);	//  Note sd_data_i is OUT of the sim!
-					// AJS // printf("data read back from SDRAM: %08X\n", bios_ptr[top->bus_mem_addr>>2]);
-				}
-			}
-
-			if (top->sd_ren) {
-				if (top->sd_addr == 0x00002834 >> 2	// NOP out the Kernel IO debug thingy routine (SCPH1001 BIOS. Normally has a jal $00002870 there).
-					|| top->sd_addr == 0x0005418C >> 2	// NOP out an SPU init routine (SCPH1001 BIOS).
-					|| top->sd_addr == 0x000545C8 >> 2 	// NOP out some SPU sample transfer stuff (SCPH1001 BIOS).
-					top->sd_data_o = 0x00000000;	// The NOP itself. (SDRAM access is 32-bit wide on the core, btw!)
-				else top->sd_data_o = ram_ptr[top->sd_addr];	// Else, normal read from SDRAM.
-				top->sd_valid = 0;
-				ram_read_flag = 1;
-				//printf("SDRAM READ.  sd_addr: %08X  sd_data_in: %08X  sd_valid: %d  sd_wait: %d  state: %d  next_state: %d  ack: %d  next_ack: %d\n", top->sd_addr, top->sd_data_o, top->sd_valid, top->sd_waitrequest, top->addr_curr_state, top->addr_next_state, top->addr_curr_ack, top->addr_next_ack);	//  Note sd_data_o is IN to the sim!
-			}
-			*/
-
-			/*
-			if (top->pc == 0x000005F4>>2) {
-				char my_byte;
-				my_byte = top->system_top__DOT__core__DOT__RegisterFile__DOT__registers[4];
-
-				printf("my_byte %s\n", my_byte);
-
-				if (my_byte == 0x0A) {
-					for (int i = 0; i < str_i; i++) {
-						printf("%s", my_string[i]);
-					}
-					printf("\n");
-					str_i = 0;
-				}
-				else my_string[str_i] = my_byte;
-				
-				if (str_i < 400) str_i++;
-			}
-			*/
-
-			//printf("ID_Cfc2: %d, ID_Ctc2: %d, ID_Mfc2: %d, ID_Mtc2: %d, ID_Lwc2: %d, ID_Swc2: %d ID_Mfc0: %d, ID_Mtc0: %d, ID_Eret: %d\n", top->ID_Cfc2, top->ID_Ctc2, top->ID_Mfc2, top->ID_Mtc2, top->ID_Lwc2, top->ID_Swc2, top->ID_Mfc0, top->ID_Mtc0, top->ID_Eret);
-
-
-			/*
-			if (old_pc == top->pc) {
-				if (inst_count < 10000) inst_count++;
-				else {
-					//printf("Stuck on instruction: %08X  bus_mem_addr: %08X  pc: %08X  sd_addr: %08X\n", top->inst, top->bus_mem_addr<<2, top->pc<<2, top->sd_addr);
-
-					
-					uint32_t opcode = (top->inst & 0xFC000000) >> 26;
-					uint32_t rs = (top->inst & 0x03E00000) >> 21;
-					uint32_t rt = (top->inst & 0x001F0000) >> 16;
-					uint32_t rd = (top->inst & 0x0000F800) >> 11;
-					uint32_t funct = (top->inst & 0x0000003F) >> 0;
-					uint32_t immediate = (top->inst & 0x0000FFFF) >> 0;
-					uint32_t jumpaddress = (top->inst & 0x03FFFFFF) >> 0;
-					uint32_t cp0_sel = (top->inst & 0x00000007) >> 0;
-					
-					//printf("Stuck at pc: %08X  addr: %08X  inst: %08X  opc: %02x  rs: %02x  rt: %02x  rd: %02x  func: %02x  imm: %04x  jumpadr: %08X  cp0: %01x\n", top->pc << 2, top->bus_mem_addr, top->inst, opcode, rs, rt, rd, funct, immediate, jumpaddress, cp0_sel);
-
-					//printf("Stuck at pc: %08X  addr: %08X  inst: %08X\n", top->pc << 2, top->bus_mem_addr, top->inst);
-
-					//printf("IF_S %d, IFE_S: %d,  ID_S: %d,  ID_E: %d,  EX_ALU_S: %d,  EX_S: %d,  EX_E_S: %d,  M_S: %d,  M_S_Cont: %d,  M_E_S: %d,  WB_S:  %d  IP: %02X\n", top->IF_Stall, top->IF_Exception_Stall, top->ID_Stall, top->ID_Exception_Stall, top->EX_ALU_Stall, top->EX_Stall, top->EX_Exception_Stall, top->M_Stall, top->M_Stall_Controller, top->M_Exception_Stall, top->WB_Stall, top->IP);
-
-					//printf("ID_Cfc2: %d, ID_Ctc2: %d, ID_Mfc2: %d, ID_Mtc2: %d, ID_Lwc2: %d, ID_Swc2: %d ID_Mfc0: %d, ID_Mtc0: %d, ID_Eret: %d\n", top->ID_Cfc2, top->ID_Ctc2, top->ID_Mfc2, top->ID_Mtc2, top->ID_Lwc2, top->ID_Swc2, top->ID_Mfc0, top->ID_Mtc0, top->ID_Eret);
-
-					//printf("bus_system_read: %d, in_MAIN: %d, in_PPORT: %d, in_SCPAD: %d, bus_io_reg_read: %d\n", top->bus_system_read, top->in_MAIN, top->in_PPORT, top->in_SCPAD, top->bus_io_reg_read);
-
-					printf("GPUBUS: %08X  GPUREAD: %08X  GPUSTAT: %08X\n", top->gpu_main_bus, top->gpu_read, top->gpu_stat);
-					inst_count = 0;
-				}
-			}
-			else {
-				inst_count = 0;
-				//printf("addr: %08X  inst: %08X\n", top->bus_mem_addr, top->inst);
-			}
-			*/
-
-			/*
-			if (top->service_DMA) {
-				printf("service_DMA: %d  dma_addr: %08X  dma_ren: %d  dma_wen: %d  dma_req: %d  dma_done: %d  ack_o: %d\n", top->service_DMA, top->dma_addr, top->dma_ren, top->dma_wen, top->dma_req, top->dma_done, top->ack_o);
-				run_enable = 0;
-			}
-			*/
-
-			//if (top->halted) printf("CPU Halted!\n");
-
-			//if (top->pc==0x80051050>>2) trigger1 = 1;
-			/*
-			if (top->pc == 0x8005a4c4 >> 2) trigger1 = 1;
-			if (trigger1) {
-				if (top->pc != old_pc) {
-					// AJS // printf("pc: %08X  bus_mem_addr: %08X   mem_addr: %08X  inst: %08X  mem_data_in: %08X  mem_data_out: %08X  GPUBUS: %08X  GPUREAD_1810: %08X  GPUSTAT_1814: %08X  gpu_fifo_full: %d\n", top->pc << 2, top->bus_mem_addr, top->bus_mem_addr, top->inst, top->mem_data_in, top->mem_data_out, top->gpu_main_bus, top->gpu_read, top->gpu_stat, top->gpu_fifo_full);
-
-					printf("service_DMA: %d  dma_addr: %08X  dma_ren: %d  dma_wen: %d  dma_req: %d  dma_done: %d  ack_o: %d\n", top->service_DMA, top->dma_addr<<2, top->dma_ren, top->dma_wen, top->dma_req, top->dma_done, top->ack_o);
-
-					//printf("Stall flags: IF:%d IFE:%d ID:%d IDE:%d EX_ALU:%d EX:%d EXE:%d MS:%d MSC:%d ME:%d WB:%d\n", top->IF_Stall, top->IF_Exception_Stall, top->ID_Stall, top->ID_Exception_Stall, top->EX_ALU_Stall, top->EX_Stall, top->EX_Exception_Stall, top->M_Stall, top->M_Stall_Controller, top->M_Exception_Stall, top->WB_Stall);
-
-					//printf("ID: CFC2:%d CTC2:%d MFC:%d MTC:%d LWC2:%d SWC2:%d MFC0:%d MTC0:%d ERET:%d\n", top->ID_Cfc2, top->ID_Ctc2, top->ID_Mfc2, top->ID_Mtc2, top->ID_Lwc2, top->ID_Swc2, top->ID_Mfc0, top->ID_Mtc0, top->ID_Eret);
-
-					//printf("Addr CS flags: BIOS:%d  MAIN:%d  PPORT:%d  SCPAD:%d  HWREG:%d\n", top->bus_system_read, top->in_MAIN, top->in_PPORT, top->in_SCPAD, top->bus_io_reg_read);
-
-					trig_count++;
-				}
-				//if (trig_count==2000) exit(0);
-				if (frame_count == 50) exit(0);
-			}
-			*/
-
-//			old_pc = top->gba_top__DOT__cpu__DOT__cpu__DOT__RegFile_PCOut;
-			if (0  /*top->bus_io_reg_read AJS *//*&& top->bus_mem_addr != old_hw_addr*/) {
-				unsigned int my_data;
-#if 0
-				
-				if (top->gba_top__DOT__cpu__DOT__cpu__DOT__WRITE) {
-					// AJS  // sprintf(my_string, "WRITE to IO  0x%08X  ", top->bus_mem_addr); console.AddLog(my_string);
-					my_data = top->gba_top__DOT__cpu__DOT__cpu__DOT__WDATA;
-				}
-				else {
-					sprintf(my_string, "READ from IO 0x%08X  ", top->bus_mem_addr); console.AddLog(my_string);
-					my_data = top->gba_top__DOT__cpu__DOT__cpu__DOT__RDATA;
-				}
-#endif			
-#if 0	
-				switch (top->bus_mem_addr) {
-					case 0x04000208: sprintf(my_string, "IME:     (PC=0x%08X) (data=0x%08X)\n", top->gba_top__DOT__cpu__DOT__cpu__DOT__RegFile_PCOut, my_data); console.AddLog(my_string); break;
-					case 0x04000300: sprintf(my_string, "POSTFLG: (PC=0x%08X) (data=0x%08X)\n", top->gba_top__DOT__cpu__DOT__cpu__DOT__RegFile_PCOut, my_data); console.AddLog(my_string); break;
-					default:         sprintf(my_string, "         (PC=0x%08X) (data=0x%08X)\n", top->gba_top__DOT__cpu__DOT__cpu__DOT__RegFile_PCOut, my_data); console.AddLog(my_string); break;
-				}
-#endif
-//				sprintf(my_string, "bus_addr_lat1=0x%08X\n", top->gba_top__DOT__mem__DOT__bus_addr_lat1); console.AddLog(my_string);
-			}
-
-			//if (top->bus_io_reg_read) old_hw_addr = top->bus_mem_addr;
-			// AJS // old_hw_addr = top->bus_mem_addr;
-			
-
-			//fprintf(stderr,"vga_addr: %d %d %d %x\n",vga_addr,line_count,pix_count,disp_ptr[vga_addr]);
-			//fprintf(stderr,"vga: %x %x %x\n",rgb[0],rgb[1],rgb[1]);
-
-				 // (line_count * width) + pixel_count.
-			//uint32_t disp_addr = (top->gba_top__DOT__gfx__DOT__gfx__DOT__vcount * 240) + top->gba_top__DOT__gfx__DOT__gfx__DOT__hcount;
-			//disp_ptr[disp_addr] = rgb[0] << 24 | rgb[1] << 16 | rgb[2] << 8;	// Our debugger framebuffer is in the 32-bit RGBA format.
-
-
-			//printf("dis_w: %d  dis_h: %d  dis_x: %d  dis_y: %d\n", top->dis_w, top->dis_h, top->dis_x, top->dis_y);
-
-			/*
-			if (top->system_top__DOT__gp__DOT__vram_we) {
-				rgb[0] = (top->system_top__DOT__gp__DOT__vram_bus_out & 0x001F) << 3;	// [4:0] Red.
-				rgb[1] = (top->system_top__DOT__gp__DOT__vram_bus_out & 0x03E0) >> 2;	// [9:5] Green.
-				rgb[2] = (top->system_top__DOT__gp__DOT__vram_bus_out & 0x7C00) >> 7;	// [14:10] Blue. Remember, the PS1 15 bpp format is in BGR order, so the upper bits are for Blue!
-				disp_ptr[top->system_top__DOT__gp__DOT__vram_addr] = rgb[0] << 24 | rgb[1] << 16 | rgb[2] << 8;	// Our debugger framebuffer is in the 32-bit RGBA format.
-
-				if ((frame_count & 1) == 0) {
-					vram_ptr[top->system_top__DOT__GPU_addr] = top->system_top__DOT__gp__DOT__vram_bus_out;
-				}
-				//else vram_ptr[top->system_top__DOT__GPU_addr] = 0xFFFF0000;	// Force a colour, because it's broken atm, and I can't see anything. ElectronAsh.
-			}
-			*/
-
-			/*
-			if (prev_sram_we_n == 0 && top->SRAM_WE_N == 1) {
-				vram_ptr[top->SRAM_ADDR] = top->system_top__DOT__sram_dq_out;
-				//printf("SRAM_WE_N: %d  SRAM_ADDR: %06x  SRAM_DQ: %04x\n", top->SRAM_WE_N, top->SRAM_ADDR, top->SRAM_DQ);
-			}
-			prev_sram_we_n = top->SRAM_WE_N;
-			*/
-			
-			/*
-			if (top->SRAM_OE_N == 0) {
-				//rgb[0] = (vram_ptr[top->SRAM_ADDR] & 0xFF000000) >> 24;
-				//rgb[1] = (vram_ptr[top->SRAM_ADDR] & 0x00FF0000) >> 16;
-				//rgb[2] = (vram_ptr[top->SRAM_ADDR] & 0x0000FF00) >> 8;
-				//top->SRAM_DQ = (rgb[0]<<7) | (rgb[1] << 2) | (rgb[0] >> 3);
-
-				top->SRAM_DQ = vram_ptr[top->SRAM_ADDR];
-
-				//printf("SRAM_OE_N: %d  SRAM_ADDR: %06x  SRAM_DQ: %04x\n", top->SRAM_OE_N, top->SRAM_ADDR, vram_ptr[top->SRAM_ADDR]);
-			}
-			*/
-
-			
-				
-				//if (frame_count > 46) {
-#if 0
-					printf("Dumping framebuffer to vga_out.raw!\n");
-					char vga_filename[40];
-					sprintf(vga_filename, "vga_frame_%d.raw", frame_count);
-					vgap = fopen(vga_filename, "w");
-					if (vgap != NULL) {
-						sprintf(my_string, "\nOpened %s for writing OK.\n", vga_filename); console.AddLog(my_string);
-					}
-					else {
-						sprintf(my_string, "\nCould not open %s for writing!\n\n", vga_filename); console.AddLog(my_string);
-						return 0;
-					};
-					fseek(vgap, 0L, SEEK_SET);
-				//}
-				
-				for (int i = 0; i < (1600 * 521); i++) {	// Pixels per line * total lines.
-					//rgb[0] = vram_ptr[i] & 0x7C00 >> 7;
-					//rgb[1] = vram_ptr[i] & 0x03E0 >> 2;
-					//rgb[2] = vram_ptr[i] & 0x001F << 3;
-
-					rgb[0] = (vga_ptr[i] & 0xFF000000) >> 24;
-					rgb[1] = (vga_ptr[i] & 0x00FF0000) >> 16;
-					rgb[2] = (vga_ptr[i] & 0x0000FF00) >> 8;
-
-					//if (frame_count > =75) fwrite(rgb, 1, 3, vgap);	// Write pixels to the file.
-					fwrite(rgb, 3, 1, vgap);	// Write pixels to the file.
-				}
-				//if (frame_count > 46) fclose(vgap);
-				fclose(vgap);
 #endif
 
-				//printf("pc: %08X  addr: %08X  inst: %08X\n", top->pc << 2, top->bus_mem_addr, top->inst);
-			}
-
-			//if (top->VGA_we==1) printf("VGA_we is High!\n");
-
-			//if (top->SRAM_DQ > 0) printf("SRAM_DQ is High!!!\n");
-			//if (top->VGA_R > 0 || top->VGA_G > 0 || top->VGA_B > 0) printf("VGA is High!!!\n");
-		}
-
-
-    if (top->clk_sys ) {
+    if (top->clk_sys) {
         ioctl_upload_before_eval();
         ioctl_download_before_eval();
     }
@@ -1018,17 +629,14 @@ static int clkdiv=3;
 		ioctl_download_after_eval();
     }
 
-
-
-
 		main_time++;            // Time passes...
 
 		return 1;
 	}
 	// Stop Verilating...
-	top->final();
-	delete top;
-	exit(0);
+	//top->final();
+	//delete top;
+	//exit(0);
 	return 0;
 }
 
@@ -1227,9 +835,9 @@ int main(int argc, char** argv, char** env) {
 
 	Verilated::commandArgs(argc, argv);
 	
-	memset(vram_ptr, 0x00, vram_size);
+	//memset(vram_ptr, 0x00, vram_size);
 	memset(disp_ptr, 0xAA, disp_size);
-	memset(vga_ptr,  0xAA, vga_size);
+	//memset(vga_ptr,  0xAA, vga_size);
 
 	memset(ram_ptr, 0x00, ram_size);
 
@@ -1363,93 +971,26 @@ int main(int argc, char** argv, char** env) {
 
 		ImGui::NewFrame();
 
-		// 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
-		//if (show_demo_window)
-		//	ImGui::ShowDemoWindow(&show_demo_window);
-
-		// 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
-		static float f = 0.1f;
-		static int counter = 0;
-
 		ImGui::Begin("Virtual Dev Board v1.0");		// Create a window called "Virtual Dev Board v1.0" and append into it.
 
 		ShowExampleAppConsole(&show_app_console);
 
 #if 0
-		if (!bios_rom_loaded) {
-			FILE *biosfile;
-			const char* bios_filename = "gbabios.bin";
-			biosfile = fopen(bios_filename, "r");
-			if (biosfile != NULL) {
-				sprintf(my_string, "GBA BIOS %s loaded OK.\n\n", bios_filename); console.AddLog(my_string);
-				fseek(biosfile, 0L, SEEK_END);
-				file_size = ftell(biosfile);
-				fseek(biosfile, 0L, SEEK_SET);
-				fread(bios_ptr, 1, bios_size, biosfile);	// Read the whole ROM file into RAM.
-			}
-			else { 
-			fprintf(stderr,"GBA BIOS NOT FOUND!\n");
-				sprintf(my_string, "GBA BIOS file not found!\n\n");  console.AddLog(my_string); return 0;
-			}
-			bios_rom_loaded = 1;
-		}
-#endif
-#if 0
-		if (!cart_rom_loaded) {
-			FILE *cartfile;
-			const char* cart_filename = "pong.gba";
-			cartfile = fopen(cart_filename, "r");
-			if (cartfile != NULL) {
-				sprintf(my_string, "GBA CART %s loaded OK.\n\n", cart_filename); console.AddLog(my_string);
-				fseek(cartfile, 0L, SEEK_END);
-				file_size = ftell(cartfile);
-				fseek(cartfile, 0L, SEEK_SET);
-				fread(cart_ptr, 1, cart_size, cartfile);	// Read the whole ROM file into RAM.
-			}
-			else {
-				fprintf(stderr,"GBA CART file not found!\n");
-			sprintf(my_string, "GBA CART file not found!\n\n"); console.AddLog(my_string); return 0;
-			}
-			cart_rom_loaded = 1;
-		}
-#endif
-
-		//ImGui::Text("Verilator sim running... ROM_ADDR: 0x%05x", top->ROM_ADDR);               // Display some text (you can use a format strings too)
-																							   //ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
-																							   //ImGui::Checkbox("Another Window", &show_another_window);
-
-		//ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-		//ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
-
-																//if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
-																//counter++;
-
-																//ImGui::SameLine();
-																//ImGui::Text("counter = %d", counter);
 		//ImGui::Text("samp_index = %d", samp_index);
 		//ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 		//ImGui::PlotLines("Lines", values, IM_ARRAYSIZE(values), values_offset, "sample", -1.0f, 1.0f, ImVec2(0, 80));
+#endif
 		if (ImGui::Button("RESET")) {
 		    main_time = 0;
 		    top->reset = 1;
-		}// else {
-		    //top->reset = 0;
-		//}
-		//if (ImGui::Button("LOAD HI CONFIG")) start_load_rom();
-		//ImGui::SameLine(); if (ImGui::Button("SAVE HI")) start_save_vram();
-		//ImGui::SameLine(); if (ImGui::Button("LOAD HI")) start_load_vram();
+		    memset(disp_ptr, 0xaa, VGA_WIDTH*VGA_HEIGHT*4);
+		    line_count = 0;
+		    pix_count = 0;
+		}
 		ImGui::Text("main_time %d", main_time);
 		ImGui::Text("frame_count: %d  line_count: %d", frame_count, line_count);
 		ImGui::Text("Addr:   0x%08X", top->top__DOT__gigatron_shell__DOT__gigatron__DOT__ram__DOT__gigatron_ram_inst__DOT__address);
 		ImGui::Text("PC:     0x%08X", top->top__DOT__gigatron_shell__DOT__gigatron__DOT__cpu__DOT__PC);
-		//ImGui::Text("Inst:   0x%08X", top->system_top__DOT__core__DOT__InstMem_In);
-
-		/*if (ImGui::Button("Reset!")) 
-		{
-		    top->reset = 1;
-		    main_time = 0;
-		}*/
-		//else top->reset = 0;
 
 		ImGui::Checkbox("RUN", &run_enable);
 
@@ -1467,37 +1008,18 @@ int main(int argc, char** argv, char** env) {
 		ImGui::SameLine(); ImGui::SliderInt("Step amount", &multi_step_amount, 8, 1024);
 //		ImGui::Text("Last SDRAM WRITE. byte_addr: 0x%08X  write_data: 0x%08X  data_ben: 0x%01X\n", last_sdram_byteaddr, last_sdram_writedata, last_sdram_ben);	//  Note sd_data_i is OUT of the sim!
 
-		//ImGui::Image(my_tex_id, ImVec2(width, height), ImVec2(0, 0), ImVec2(1, 1), ImColor(255, 255, 255, 255), ImColor(255, 255, 255, 128));
+		//ImGui::Image(my_tex_id, ImVec2(VGA_WIDTH, VGA_HEIGHT), ImVec2(0, 0), ImVec2(1, 1), ImColor(255, 255, 255, 255), ImColor(255, 255, 255, 128));
 		ImGui::Image(my_tex_id, ImVec2(VGA_WIDTH, VGA_HEIGHT));
 		ImGui::End();
 
 
 #if 1
 		ImGui::Begin("RAM Editor");
-		ImGui::Checkbox("Follow Writes", &follow_writes);
+		//ImGui::Checkbox("Follow Writes", &follow_writes);
 		// AJS // if (follow_writes) write_address = (top->bus_mem_addr & 0x00FFFFFF) >> 2;
 		mem_edit_1.DrawContents(ram_ptr, ram_size, 0);
 		ImGui::End();
 #endif		
-#if 0
-		ImGui::Begin("CPU Registers");
-		ImGui::Spacing();
-		//ImGui::Text("PC       0x%04X", top->top__DOT__main__DOT__cpu_inst__DOT__core__DOT__PC);
-		//ImGui::Text("AB       0x%02X%02X", top->top__DOT__main__DOT__cpu_inst__DOT__core__DOT__ABH,top->top__DOT__main__DOT__cpu_inst__DOT__core__DOT__ABL);
-		//ImGui::Text("DI       0x%02X", top->top__DOT__main__DOT__cpu_inst__DOT__core__DOT__DI);
-		//ImGui::Text("DO       0x%02X", top->top__DOT__main__DOT__cpu_inst__DOT__core__DOT__DO);
-		//ImGui::Spacing();
-		ImGui::Separator();
- 		ImGui::End();
-#endif
-// initialize??
-#if 1
-    top->top__DOT__playerinput=0x3df;
-    VSW1 = 0x54;
-    VSW2 = 0x0;
-    PLAYERINPUT = 0x3df;
-    JS = 0x0;
-#endif
 
 #ifdef WINDOWS
 		// Update the texture!
@@ -1525,38 +1047,6 @@ int main(int argc, char** argv, char** env) {
         //glUseProgram(0); // You may want this if using this code in an OpenGL 3+ context where shaders may be bound
         ImGui_ImplOpenGL2_RenderDrawData(ImGui::GetDrawData());
         SDL_GL_SwapWindow(window);
-#endif
-
-# if 1
-ImGuiIO& io = ImGui::GetIO();
-
-if (ImGui::IsKeyPressed(SDL_SCANCODE_SPACE) ){
-                            playinput_assert(0);
-}
-else {
-                            playinput_deassert(0);
-}
-if (ImGui::IsKeyPressed(SDL_SCANCODE_LEFT) ){
-                            js_assert(6);
-}
-else {
-                            js_deassert(6);
-}
-if (ImGui::IsKeyPressed(SDL_SCANCODE_RIGHT) ){
-                            js_assert(7);
-}
-else {
-                            js_deassert(7);
-}
-if (ImGui::IsKeyPressed(SDL_SCANCODE_5)) {
-         playinput_assert(7);
-}
-else 
-         playinput_deassert(7);
-if (ImGui::IsKeyPressed(SDL_SCANCODE_1))
-         playinput_assert(3);
-else 
-         playinput_deassert(3);
 #endif
 
 
