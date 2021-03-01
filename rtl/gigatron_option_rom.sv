@@ -10,7 +10,7 @@
 module Gigatron_option_rom
 (
        input [3:0] option_select,
-       input [14:0] address,
+       input [15:0] address,
        output reg [7:0] data
 );
 
@@ -44,7 +44,7 @@ module Gigatron_option_rom
   end
 
   always @* begin
-    data = reg_eeprom[address];
+    data = reg_eeprom[address[14:0]];
   end
 
 endmodule

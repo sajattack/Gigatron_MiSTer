@@ -330,7 +330,7 @@ module Gigatron_Loader
   // Option ROM
   Gigatron_option_rom option_rom (
     .option_select(loader_program_select),
-    .address(rom_address[14:0]),
+    .address(rom_address[15:0]),
     .data(rom_data)
   );
 
