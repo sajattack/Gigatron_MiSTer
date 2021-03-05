@@ -1,11 +1,4 @@
-//
-//
-//
-
-`define SDL_DISPLAY 
-//`define USE_VGA
-
-module top(VGA_R,VGA_B,VGA_G,VGA_HS,VGA_VS,reset,clk_sys,clk_vid,clk_app,ioctl_upload,ioctl_download,ioctl_addr,ioctl_dout,ioctl_din,ioctl_index,ioctl_wait,ioctl_wr);
+module top(VGA_R,VGA_B,VGA_G,VGA_HS,VGA_VS,VGA_DE,reset,clk_sys,clk_vid,clk_app,ioctl_upload,ioctl_download,ioctl_addr,ioctl_dout,ioctl_din,ioctl_index,ioctl_wait,ioctl_wr);
 
    input clk_sys/*verilator public_flat*/;
    input clk_vid/*verilator public_flat*/;
@@ -18,6 +11,7 @@ module top(VGA_R,VGA_B,VGA_G,VGA_HS,VGA_VS,reset,clk_sys,clk_vid,clk_app,ioctl_u
    
    output VGA_HS/*verilator public_flat*/;
    output VGA_VS/*verilator public_flat*/;
+   output VGA_DE/*verilator public_flat*/;
    
    input        ioctl_upload;
    input        ioctl_download;
@@ -117,7 +111,7 @@ wire hsync_n;
 wire [1:0] red;
 wire [1:0] green;
 wire [1:0] blue;
-//wire hblank, vblank;
+wire hblank, vblank;
 wire [7:0] gigatron_output_port;
 wire [7:0] gigatron_extended_output_port;
 wire famicom_pulse;
@@ -133,14 +127,14 @@ Gigatron_Shell gigatron_shell(
     .run(1'b1),
 
     .gigatron_output_port(gigatron_output_port),
-    .gigatron_extended_output_port(gigatron_extended_output_port),
+    //.gigatron_extended_output_port(gigatron_extended_output_port),
     
     //
     // These signals are from the Famicom serial game controller.
     //
-    .famicom_pulse(famicom_pulse), // output
-    .famicom_latch(famicom_latch), // output
-    .famicom_data(famicom_data),   // input
+    //.famicom_pulse(famicom_pulse), // output
+    //.famicom_latch(famicom_latch), // output
+    //.famicom_data(famicom_data),   // input
 
     //// Raw VGA signals from the Gigatron
 
@@ -149,8 +143,8 @@ Gigatron_Shell gigatron_shell(
     .red(red),
     .green(green),
     .blue(blue),
-    //.hblank(hblank),
-    //.vblank(vblank),
+    .hblank(hblank),
+    .vblank(vblank),
 
     ////
     //// Write output to external framebuffer
@@ -199,8 +193,7 @@ assign VGA_B={blue,blue,blue,blue};
 
 assign VGA_HS = ~hsync_n;
 assign VGA_VS = ~vsync_n;
-//assign HBlank = hblank;
-//assign VBlank = vblank;
+assign VGA_DE = ~(VGA_HS|VGA_VS);
 //wire ce_pix = 1'b1;
 
 endmodule

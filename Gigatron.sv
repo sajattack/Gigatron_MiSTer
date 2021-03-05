@@ -163,11 +163,9 @@ assign VGA_F1 = 0;
 assign VGA_SCALER = 0;
 
 assign AUDIO_S = 0;
-assign AUDIO_R = 0;
+//assign AUDIO_R = 0;
 assign AUDIO_MIX = 3;
 
-assign LED_DISK = 0;
-assign LED_POWER = 0;
 assign BUTTONS = 0;
 
 //////////////////////////////////////////////////////////////////
@@ -215,24 +213,24 @@ hps_io #(.STRLEN($size(CONF_STR)>>3)) hps_io
 
 wire clk_sys;
 wire clk_vid;
-//wire clk_app;
+wire clk_app;
 pll pll
 (
 	.refclk(CLK_50M),
 	.rst(0),
 	.outclk_0(clk_sys),
 	.outclk_1(clk_vid),
-	//.outclk_2(clk_app)
+	.outclk_2(clk_app)
 );
 
-reg clk_app;
-reg [2:0] clk_app_counter;
-always @(posedge clk_sys) begin
-    clk_app_counter <= clk_app_counter+1;
-    if (clk_app_counter==0) begin
-        clk_app=~clk_app;
-    end
-end
+//reg clk_app;
+//reg [2:0] clk_app_counter;
+//always @(posedge clk_sys) begin
+//    clk_app_counter <= clk_app_counter+1;
+//    if (clk_app_counter==0) begin
+//        clk_app=~clk_app;
+//    end
+//end
 
 
 wire reset = RESET | status[0]; //| buttons[1];
@@ -257,8 +255,8 @@ Gigatron_Shell gigatron_shell(
     .reset(reset),
     .run(1'b1),
 
-    .gigatron_output_port(gigatron_output_port),
-    .gigatron_extended_output_port(gigatron_extended_output_port),
+    //.gigatron_output_port(gigatron_output_port),
+    //.gigatron_extended_output_port(gigatron_extended_output_port),
     
     //
     // These signals are from the Famicom serial game controller.
@@ -293,13 +291,13 @@ Gigatron_Shell gigatron_shell(
     ////    .framebuffer_write_data(framebuffer_write_data),
 
     //// BlinkenLights
-    ////    .led5(gigatron_led5),
-    ////    .led6(gigatron_led6),
-    ////    .led7(gigatron_led7),
+        .led5(LED_POWER[0]),
+        .led6(LED_DISK[0]),
+        .led7(LED_USER),
     ////    .led8(gigatron_led8),
 
     //// 16 bit LPCM audio output from the Gigatron.
-    .audio_dac(AUDIO_L),
+    .audio_dac(AUDIO_R),
     ////    // Digital volume control with range 0 - 11.
     .digital_volume_control(4'd11),
 
@@ -325,7 +323,7 @@ assign VGA_DE = ~(hblank|vblank);
 assign CE_PIXEL = 1'b1;
 assign CLK_VIDEO = clk_vid;
 
-
-
+assign LED_DISK[1] = 1;
+assign LED_POWER[1] = 1;
 
 endmodule

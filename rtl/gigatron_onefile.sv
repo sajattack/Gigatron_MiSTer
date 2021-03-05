@@ -328,11 +328,11 @@ module Gigatron_Loader
   wire [7:0] rom_data;
 
   // Option ROM
-  //Gigatron_option_rom option_rom (
-    //.option_select(loader_program_select),
-    //.address(rom_address[15:0]),
-    //.data(rom_data)
-  //);
+  Gigatron_option_rom option_rom (
+    .option_select(loader_program_select),
+    .address(rom_address[15:0]),
+    .data(rom_data)
+  );
 
   // BabelFish loader
   menlo_babelfish_rdma_transmitter babelfish (
@@ -757,7 +757,7 @@ module Gigatron_VGA_Handler
   //parameter VGA_V_BACK_PORCH = 0;
   
 
-  parameter VGA_H_FRONT_PORCH = 10'd16;    // From vga_controller.v
+  //parameter VGA_H_FRONT_PORCH = 10'd16;    // From vga_controller.v
   //parameter VGA_H_FRONT_PORCH = 10'd0;
   parameter VGA_H_BACK_PORCH  = 10'd45;    // To much cut off the side
   //parameter VGA_H_BACK_PORCH  = 10'd144; // from vga_controller.v
@@ -801,7 +801,8 @@ module Gigatron_VGA_Handler
   // is 480 lines.
   //
   parameter VGA_FRAMEBUFFER_MAX_VERT_SCAN_LINE = 10'd525;
-  reg [9:0] vga_vertical_line_index;
+  
+  reg [9:0] vga_vertical_line_index/*verilator public_flat*/;
 
   //
   // This is run at vga_clock since that is what the monitor draws its pixels
@@ -962,8 +963,8 @@ module Gigatron_VGA_Handler
 
   end // end always posedge vga_clock
 
-  assign hBlank = !((vga_horizontal_line_index>VGA_H_BACK_PORCH) & (vga_horizontal_line_index<=VGA_FRAMEBUFFER_MAX_VISIBLE_HORZ_SCAN_LINE));
-  assign vBlank = !((vga_vertical_line_index>VGA_V_BACK_PORCH) & (vga_vertical_line_index<=VGA_FRAMEBUFFER_MAX_VISIBLE_VERT_SCAN_LINE));
+  assign hBlank = (vga_horizontal_line_index > VGA_FRAMEBUFFER_MAX_VISIBLE_HORZ_SCAN_LINE + VGA_H_BACK_PORCH);
+  assign vBlank = (vga_vertical_line_index > VGA_FRAMEBUFFER_MAX_VISIBLE_VERT_SCAN_LINE + VGA_V_BACK_PORCH);
 
 endmodule
 
