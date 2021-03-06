@@ -293,7 +293,7 @@ int verilate() {
                 //pix_count = 0;
                 //sprintf(my_string, "Frame: %06d  VSync! ", frame_count);
                 printf("Frame: %06d  VSync!\n", frame_count);
-                memset(disp_ptr, 0xaa, VGA_WIDTH*VGA_HEIGHT*4);
+                //memset(disp_ptr, 0xaa, VGA_WIDTH*VGA_HEIGHT*4);
             }
 
             prev_vsync = top->VGA_VS;
@@ -707,11 +707,11 @@ int main(int argc, char** argv, char** env) {
 
 		if (run_enable) 
         {
-            if (frame_count <5) {
+            //if (frame_count <5) {
                 for (int step = 0; step < 500000; step++) verilate();	// Simulates MUCH faster if it's done in batches.
-            } else {
+            /*} else {
                 for (int step = 0; step < 4096; step++) verilate();	// Simulates MUCH faster if it's done in batches.
-            }
+            }*/
         }
 		else {																// But, that will affect the values we can grab for the GUI.
 			if (single_step) verilate();
