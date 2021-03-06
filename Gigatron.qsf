@@ -229,7 +229,6 @@ set_hps_location_assignment HPSINTERFACEPERIPHERALSPIMASTER_X52_Y72_N111 -to spi
 set_hps_location_assignment HPSINTERFACEPERIPHERALUART_X52_Y67_N111 -to uart
 set_global_assignment -name PRE_FLOW_SCRIPT_FILE "quartus_sh:sys/build_id.tcl"
 set_global_assignment -name CDF_FILE jtag.cdf
-set_global_assignment -name QIP_FILE sys/sys.qip
 source sys/sys_analog.tcl
 set_location_assignment PIN_AF25 -to SDIO_DAT[0]
 set_location_assignment PIN_AF23 -to SDIO_DAT[1]

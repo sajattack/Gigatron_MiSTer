@@ -174,7 +174,9 @@ module Gigatron_Audio_Handler
   reg [3:0] translated;
 
   always_comb begin
-    output_audio_dac = {12'b0, translated << digital_volume_control};
+    /* verilator lint_off WIDTH */
+    output_audio_dac = translated << digital_volume_control;
+	 /* verilator lint_on WIDTH */
   end
 
   //
@@ -3572,6 +3574,8 @@ module tb_gigatron();
   // 640 x 480 x 8 Framebuffer Model
   reg [7:0] framebuffer [0:307199]; // 19 bit address, 8 bit data
   reg [7:0] value;
+  
+  wire hblank, vblank;
 
   // Device Under Test instance
   Gigatron DUT(
