@@ -5,12 +5,8 @@
 #include <stdlib.h>
 #include <math.h>
 
-//#include <atomic>
-//#include <fstream>
-
 #include <verilated.h>
 #include "Vtop.h"
-
 
 #include "../imgui/imgui.h"
 #ifndef WINDOWS
@@ -63,65 +59,12 @@ static int                      g_VertexBufferSize = 5000, g_IndexBufferSize = 1
 // Instantiation of module.
 Vtop* top = NULL;
 
-char my_string[1024];
-int str_i = 0;
-
-unsigned int file_size;
-
-unsigned int row;
-unsigned int col;
-unsigned int bank;
-unsigned int dram_address;
-
 int pix_count = 0;
-
 unsigned char rgb[3];
 bool prev_vsync = 0;
 int frame_count = 0;
-
-bool vga_file_select = 0;
-
 bool prev_hsync = 0;
 int line_count = 0;
-
-bool prev_sram_we_n = 0;
-
-uint32_t inst_data_temp;
-
-uint32_t prev_pc = 0xDEADBEEF;
-
-unsigned int avm_byte_addr;
-unsigned int avm_word_addr;
-
-unsigned int burstcount;
-unsigned int byteenable;
-unsigned int writedata;
-
-unsigned int datamux;	// What the aoR3000 core is actually reading from the bus! Only valid when avm_readdata_valid is High!
-unsigned int datatemp;
-
-unsigned int old_pc;
-unsigned int inst_count = 0;
-
-unsigned int old_hw_addr;
-unsigned int hw_count = 0;
-
-bool trigger1 = 0;
-bool trigger2 = 0;
-
-int trig_count = 0;
-
-uint16_t byteena_bits;
-
-bool ram_read_flag = 0;
-bool ram_write_flag = 0;
-
-FILE *vgap;
-
-int last_sdram_writedata = 0;
-int last_sdram_byteaddr = 0;
-int last_sdram_ben = 0;
-
 bool run_enable = 0;
 bool single_step = 0;
 bool multi_step = 0;
@@ -251,11 +194,11 @@ int verilate() {
 		}
 
 		if (top->reset==1) {
-		    //memset(disp_ptr, 0xaa, BUF_WIDTH*BUF_HEIGHT*4);
-			//line_count = 0;
-			//pix_count = 0;
-			//frame_count = 0;
-		    //memset(ram_ptr, 0, ram_size);
+		    memset(disp_ptr, 0xaa, VGA_WIDTH*VGA_HEIGHT*4);
+			line_count = 0;
+			pix_count = 0;
+			frame_count = 0;
+		    memset(ram_ptr, 0, ram_size);
 		}
 
 		top->clk_sys=!top->clk_sys;
@@ -271,29 +214,18 @@ int verilate() {
 
             pix_count = top->top__DOT__gigatron_shell__DOT__gigatron__DOT__vga__DOT__vga_horizontal_line_index;
             
-           uint32_t vga_addr = top->top__DOT__gigatron_shell__DOT__gigatron__DOT__vga__DOT__vga_framebuffer_write_address /*% (VGA_WIDTH*VGA_HEIGHT)*/;
+           uint32_t vga_addr = top->top__DOT__gigatron_shell__DOT__gigatron__DOT__vga__DOT__vga_framebuffer_write_address;
 
-		    if (top->VGA_DE && vga_addr<VGA_WIDTH*VGA_HEIGHT && frame_count >=5) {
+		    if (top->VGA_DE && vga_addr<VGA_WIDTH*VGA_HEIGHT) {
 
                 rgb[0] = top->VGA_B;
                 rgb[1] = top->VGA_G;
                 rgb[2] = top->VGA_R;
-                //uint32_t vga_addr = line_count * VGA_WIDTH + pix_count;
-                //uint32_t vga_addr = ((1024-pix_count) * 1024) +line_count;
                 disp_ptr[vga_addr] = 0xFF000000 | rgb[0] << 16 | rgb[1] << 8 | rgb[2];	// Our debugger framebuffer is in the 32-bit RGBA format.
             }
 
-            if (prev_hsync && !top->VGA_HS) {
-				//pix_count = 0;
-            }
-            prev_hsync = top->VGA_HS;
-			
             if (prev_vsync && !top->VGA_VS) {
                 frame_count++;
-                //pix_count = 0;
-                //sprintf(my_string, "Frame: %06d  VSync! ", frame_count);
-                printf("Frame: %06d  VSync!\n", frame_count);
-                //memset(disp_ptr, 0xaa, VGA_WIDTH*VGA_HEIGHT*4);
             }
 
             prev_vsync = top->VGA_VS;
@@ -301,7 +233,6 @@ int verilate() {
 #if 1
         if (top->top__DOT__gigatron_shell__DOT__gigatron__DOT__ram__DOT__gigatron_ram_inst__DOT__wren) {
             ram_ptr[top->top__DOT__gigatron_shell__DOT__gigatron__DOT__ram__DOT__gigatron_ram_inst__DOT__address] = top->top__DOT__gigatron_shell__DOT__gigatron__DOT__ram__DOT__gigatron_ram_inst__DOT__data;
-                //printf("Wrote %x to %x\n", top->top__DOT__gigatron_shell__DOT__gigatron__DOT__ram__DOT__gigatron_ram_inst__DOT__data, top->top__DOT__gigatron_shell__DOT__gigatron__DOT__ram__DOT__gigatron_ram_inst__DOT__address);
         }
 #endif
 
@@ -424,7 +355,7 @@ printf("ioctl_download_before_eval: dout %x %x\n",top->ioctl_dout,nextchar);
 }
 void ioctl_download_after_eval()
 {
-    top->ioctl_addr=ioctl_next_addr;
+   top->ioctl_addr=ioctl_next_addr;
    top->ioctl_dout=(unsigned char)nextchar;
 if (ioctl_file) printf("ioctl_download_after_eval %x wr %x dl %x %x\n",top->ioctl_addr,top->ioctl_wr,top->ioctl_download,top->ioctl_dout);
 }
@@ -468,7 +399,7 @@ int main(int argc, char** argv, char** env) {
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
     SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
-    SDL_Window* window = SDL_CreateWindow("Dear ImGui SDL2+OpenGL example", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, window_flags);
+    SDL_Window* window = SDL_CreateWindow("Gigatron Simulator", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, window_flags);
     SDL_GLContext gl_context = SDL_GL_CreateContext(window);
     SDL_GL_MakeCurrent(window, gl_context);
     SDL_GL_SetSwapInterval(1); // Enable vsync
@@ -478,7 +409,6 @@ int main(int argc, char** argv, char** env) {
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 	ImGuiIO& io = ImGui::GetIO(); (void)io;
-	//io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
 
 	// Setup Dear ImGui style
 	ImGui::StyleColorsDark();
@@ -499,11 +429,6 @@ int main(int argc, char** argv, char** env) {
 	
 	memset(disp_ptr, 0xAA, disp_size);
 	memset(ram_ptr, 0x00, ram_size);
-	//srand(123);
-    //for (int i=0; i<ram_size/4; i++)
-    //{
-        //ram_ptr[i]=rand();
-    //}
 
 	// Our state
 	bool show_demo_window = true;
@@ -519,8 +444,6 @@ int main(int argc, char** argv, char** env) {
 	desc.MipLevels = 1;
 	desc.ArraySize = 1;
 	desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	//desc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
-	//desc.Format = DXGI_FORMAT_B5G5R5A1_UNORM;
 	desc.SampleDesc.Count = 1;
 	desc.Usage = D3D11_USAGE_DEFAULT;
 	desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
@@ -529,7 +452,6 @@ int main(int argc, char** argv, char** env) {
 	ID3D11Texture2D *pTexture = NULL;
 	D3D11_SUBRESOURCE_DATA subResource;
 	subResource.pSysMem = disp_ptr;
-	//subResource.pSysMem = vga_ptr;
 	subResource.SysMemPitch = desc.Width * 4;
 	subResource.SysMemSlicePitch = 0;
 	g_pd3dDevice->CreateTexture2D(&desc, &subResource, &pTexture);
@@ -546,7 +468,6 @@ int main(int argc, char** argv, char** env) {
 
 	// Store our identifier
 	ImTextureID my_tex_id = (ImTextureID)g_pFontTextureView;
-
 	
 	// Create texture sampler
 	{
@@ -570,10 +491,7 @@ int main(int argc, char** argv, char** env) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-
-    //if (frame_count >= 14) {
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, VGA_WIDTH, VGA_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE,disp_ptr);
-    //}
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, VGA_WIDTH, VGA_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE,disp_ptr);
     ImTextureID my_tex_id = (ImTextureID) tex;
 
 #endif
@@ -631,11 +549,6 @@ int main(int argc, char** argv, char** env) {
 		ImGui::Begin("Virtual Dev Board v1.0");		// Create a window called "Virtual Dev Board v1.0" and append into it.
 
 
-#if 0
-		//ImGui::Text("samp_index = %d", samp_index);
-		//ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-		//ImGui::PlotLines("Lines", values, IM_ARRAYSIZE(values), values_offset, "sample", -1.0f, 1.0f, ImVec2(0, 80));
-#endif
 		if (ImGui::Button("RESET")) {
 		    top->reset = 1;
             main_time = 0;
@@ -647,7 +560,6 @@ int main(int argc, char** argv, char** env) {
 		ImGui::Text("Instruction:     0x%04X", top->top__DOT__gigatron_shell__DOT__gigatron__DOT__eeprom__DOT__data__out__out0);
 		ImGui::Text("HS:     %d", top->top__DOT__VGA_HS);
 		ImGui::Text("VS:     %d", top->top__DOT__VGA_VS);
-		//ImGui::Text("VGA_ADDR:      0x%04x", vga_addr);
 
 		ImGui::Checkbox("RUN", &run_enable);
 
@@ -663,9 +575,7 @@ int main(int argc, char** argv, char** env) {
 			multi_step = 1;
 		}
 		ImGui::SameLine(); ImGui::SliderInt("Step amount", &multi_step_amount, 8, 4096);
-		//if (frame_count >=14) {
-            ImGui::Image(my_tex_id, ImVec2(VGA_WIDTH, VGA_HEIGHT));
-        //}
+        ImGui::Image(my_tex_id, ImVec2(VGA_WIDTH, VGA_HEIGHT));
 		ImGui::End();
 
 
@@ -688,18 +598,14 @@ int main(int argc, char** argv, char** env) {
 		ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 
 		g_pSwapChain->Present(1, 0); // Present with vsync
-		//g_pSwapChain->Present(0, 0); // Present without vsync
 #else
-        //if (frame_count >= 14) {
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, VGA_WIDTH, VGA_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE,disp_ptr);
-        //}
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, VGA_WIDTH, VGA_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE,disp_ptr);
 
         // Rendering
         ImGui::Render();
         glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
         glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
         glClear(GL_COLOR_BUFFER_BIT);
-        //glUseProgram(0); // You may want this if using this code in an OpenGL 3+ context where shaders may be bound
         ImGui_ImplOpenGL2_RenderDrawData(ImGui::GetDrawData());
         SDL_GL_SwapWindow(window);
 #endif
@@ -707,11 +613,7 @@ int main(int argc, char** argv, char** env) {
 
 		if (run_enable) 
         {
-            //if (frame_count <5) {
-                for (int step = 0; step < 500000; step++) verilate();	// Simulates MUCH faster if it's done in batches.
-            /*} else {
-                for (int step = 0; step < 4096; step++) verilate();	// Simulates MUCH faster if it's done in batches.
-            }*/
+            for (int step = 0; step < 500000; step++) verilate();	// Simulates MUCH faster if it's done in batches.
         }
 		else {																// But, that will affect the values we can grab for the GUI.
 			if (single_step) verilate();

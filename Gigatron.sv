@@ -163,12 +163,11 @@ assign VGA_F1 = 0;
 assign VGA_SCALER = 0;
 
 assign AUDIO_S = 0;
-//assign AUDIO_R = 0;
 assign AUDIO_MIX = 3;
 
 assign BUTTONS = 0;
 
-//////////////////////////////////////////////////////////////////
+//////////////////////////////  HPS  ////////////////////////////////////
 
 wire [1:0] ar = status[9:8];
 
@@ -233,9 +232,9 @@ pll pll
 //end
 
 
-wire reset = RESET | status[0]; //| buttons[1];
+wire reset = RESET | status[0];
 
-//////////////////////////////////////////////////////////////////
+//////////////////////////////  MAIN CORE CONNECTIONS  ////////////////////////////////////
 
 wire HBlank;
 wire VBlank;
@@ -247,6 +246,7 @@ wire [1:0] green;
 wire [1:0] blue;
 wire hblank, vblank;
 wire [7:0] gigatron_output_port;
+wire [15:0] audio;
 
 Gigatron_Shell gigatron_shell(
     .fpga_clock(clk_sys), // 50Mhz FPGA clock
@@ -297,12 +297,12 @@ Gigatron_Shell gigatron_shell(
     ////    .led8(gigatron_led8),
 
     //// 16 bit LPCM audio output from the Gigatron.
-    .audio_dac(AUDIO_R),
+    .audio_dac(audio),
     ////    // Digital volume control with range 0 - 11.
     .digital_volume_control(4'd11),
 
     //// Signals from user interface to select program to load
-    .loader_go(buttons[1]),  // input, true when user select load
+    //.loader_go(buttons[1]),  // input, true when user select load
     .loader_program_select(4'd0)
     //.loader_active(application_active) // output
 );	
@@ -323,7 +323,13 @@ assign VGA_DE = ~(hblank|vblank);
 assign CE_PIXEL = 1'b1;
 assign CLK_VIDEO = clk_vid;
 
+//////////////////////////////  LEDS  ////////////////////////////////////
+
 assign LED_DISK[1] = 1;
 assign LED_POWER[1] = 1;
+
+//////////////////////////////  AUDIO  ////////////////////////////////////
+assign AUDIO_L = audio;
+assign AUDIO_R = audio;
 
 endmodule
