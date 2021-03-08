@@ -126,8 +126,8 @@ reg joypad_clock, last_joypad_clock;
 reg joypad_out;
 
 wire [7:0] nes_joy_A = { 
-    joystick[1], joystick[2], joystick[3], joystick[0],
-    joystick[6], joystick[7], joystick[4], joystick[5] 
+    joystick[1], joystick[2], joystick[3], joystick[7],
+    joystick[6], joystick[5], joystick[4], joystick[0] 
 };
 
 always @(posedge clk_sys) begin
