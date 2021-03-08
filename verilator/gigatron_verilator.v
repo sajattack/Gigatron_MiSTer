@@ -22,45 +22,7 @@ module top(VGA_R,VGA_B,VGA_G,VGA_HS,VGA_VS,VGA_DE,reset,clk_sys,clk_vid,clk_app,
    input [7:0]  ioctl_index;
    output  reg  ioctl_wait=1'b0;
    
-
-//reg clk_app;
-//reg [2:0] clk_app_counter;
-//always @(posedge clk_sys) begin
-    //clk_app_counter <= clk_app_counter+1;
-    //if (clk_app_counter==0) begin
-        //clk_app=~clk_app;
-    //end
-//end
-
-//wire reset_n;
-//Reset_Delay reset_generator(
-    //.iCLK(clk_sys),
-    //.oRESET(reset_n) // output
-//);
-//assign reset = ~reset_n;
-
-wire [3:0] led/*verilator public_flat*/;
-
-reg [7:0]  trakball/*verilator public_flat*/;
-reg [7:0]  joystick/*verilator public_flat*/;
-reg [7:0]  sw1/*verilator public_flat*/;
-reg [7:0]  sw2/*verilator public_flat*/;
-reg [9:0]  playerinput/*verilator public_flat*/;
-
-   
-//-------------------------------------------------------------------
-
-//wire cart_download = ioctl_download & (ioctl_index != 8'd0);
-//wire bios_download = ioctl_download & (ioctl_index == 8'd0);
-
-
-//reg old_cart_download;
-//reg initial_pause = 1'b1;
-
-//always @(posedge clk_sys) begin
-	//old_cart_download <= cart_download;
-	//if (old_cart_download & ~cart_download) initial_pause <= 1'b0;
-//end
+reg [31:0]  joystick/*verilator public_flat*/;
 
 ////////////////////////////  HPS I/O  //////////////////////////////////
 
@@ -75,37 +37,6 @@ wire [7:0]  ioctl_dout;
 wire        ioctl_wr;
 wire [7:0]  ioctl_index;
 
-wire [15:0] joy0,joy1;
-
-
-//reg [7:0]RR=8'b0;
-//reg [7:0]GG=8'b0;
-//reg [7:0]BB=8'b11111111;
-//assign VGA_R=RR;
-//assign VGA_G=GG;
-//assign VGA_B=BB;
-/*wire [7:0] VGA_R2;
-wire [7:0] VGA_G2;
-wire [7:0] VGA_B2;
-always @(posedge clk_sys) begin
-	$display("vga: %x %x %x", VGA_R,VGA_G,VGA_B);
-end*/
-
-//always @(posedge clk_vid) begin
-	//$display("vga: %x %x %x %b %b", VGA_R,VGA_G,VGA_B,VGA_HS,VGA_VS);
-//end
-
-//always @(posedge clk_sys) begin
-    //$display("clocks: %b %b %b", clk_sys, clk_vid, clk_app);
-    //$display("output: %d", gigatron_output_port);
-    //$display("reset: %b", reset);
-//end
-//always @(negedge clk_sys) begin
-    //$display("clocks: %b %b %b", clk_sys, clk_vid, clk_app);
-//end
-
-
-
 wire vsync_n;
 wire hsync_n;
 wire [1:0] red;
@@ -114,9 +45,6 @@ wire [1:0] blue;
 wire hblank, vblank;
 wire [7:0] gigatron_output_port;
 wire [7:0] gigatron_extended_output_port;
-wire famicom_pulse;
-wire famicom_latch;
-wire famicom_data;
 
 // verilator lint_off PINMISSING
 Gigatron_Shell gigatron_shell(
@@ -132,9 +60,9 @@ Gigatron_Shell gigatron_shell(
     //
     // These signals are from the Famicom serial game controller.
     //
-    //.famicom_pulse(famicom_pulse), // output
-    //.famicom_latch(famicom_latch), // output
-    //.famicom_data(famicom_data),   // input
+    .famicom_pulse(joypad_clock), // output
+    .famicom_latch(joypad_out), // output
+    .famicom_data(joypad_bits[0]), // input
 
     //// Raw VGA signals from the Gigatron
 
@@ -182,11 +110,6 @@ wire [15:0] AUDIO_L;
 wire [15:0] AUDIO_R = AUDIO_L;
 
 //////////////////////////////  VIDEO  ////////////////////////////////////
-//assign red = gigatron_output_port[1:0];
-//assign green = gigatron_output_port[3:2];
-//assign blue = gigatron_output_port[5:4];
-//assign hsync_n = gigatron_output_port[6:6];
-//assign vsync_n = gigatron_output_port[7:7];
 assign VGA_R={red,red,red,red};
 assign VGA_G={green,green,green,green};
 assign VGA_B={blue,blue,blue,blue};
@@ -194,24 +117,32 @@ assign VGA_B={blue,blue,blue,blue};
 assign VGA_HS = ~hsync_n;
 assign VGA_VS = ~vsync_n;
 assign VGA_DE = ~(VGA_HS|VGA_VS);
-//wire ce_pix = 1'b1;
+
+
+////////////////////////////  INPUT  //////////////////////////////////////
+
+reg [23:0] joypad_bits;
+reg joypad_clock, last_joypad_clock;
+reg joypad_out;
+
+wire [7:0] nes_joy_A = { 
+    joystick[1], joystick[2], joystick[3], joystick[0],
+    joystick[6], joystick[7], joystick[4], joystick[5] 
+};
+
+always @(posedge clk_sys) begin
+	if (reset) begin
+		joypad_bits <= 0;
+		last_joypad_clock <= 0;
+	end else begin
+		if (joypad_out) begin
+			joypad_bits  <= {16'hFFFF, ~nes_joy_A};
+		end
+		if (!joypad_clock && last_joypad_clock) begin
+			joypad_bits <= {1'b0, joypad_bits[23:1]};
+		end
+		last_joypad_clock <= joypad_clock;
+	end
+end
 
 endmodule
-
-
-//module	Reset_Delay(iCLK,oRESET);
-//input		iCLK;
-//output reg	oRESET;
-//reg	[19:0]	Cont;
-
-//always@(posedge iCLK)
-//begin
-    //if(Cont != 20'hFFFFF)
-    //begin
-        //Cont	<=	Cont + 10'h1;
-        //oRESET	<=	1'b0;
-    //end
-    //else
-    //oRESET	<=	1'b1;
-//end
-//endmodule

@@ -184,8 +184,22 @@ double sc_time_stamp () {	// Called by $time in Verilog.
 	return main_time;
 }
 
+#define JS      top->top__DOT__joystick
+void
+js_assert(int s)
+{
+        JS |= 1<<s;
+}
+
+void
+js_deassert(int s)
+{
+        JS &= ~(1<<s);
+}
+
 int verilate() {
 	if (!Verilated::gotFinish()) {
+
 		if (main_time < 2048) {
 			top->reset = 1;   	// Assert reset (active HIGH)
 		}
@@ -544,10 +558,63 @@ int main(int argc, char** argv, char** env) {
 
 #endif
 
+        ImGuiIO& io = ImGui::GetIO();
+
+        if (ImGui::IsKeyPressed(SDL_SCANCODE_RIGHT) ){
+            js_assert(0);
+        }
+        else {
+            js_deassert(0);
+        }
+        if (ImGui::IsKeyPressed(SDL_SCANCODE_LEFT) ){
+            js_assert(1);
+        }
+        else {
+            js_deassert(1);
+        }
+
+        if (ImGui::IsKeyPressed(SDL_SCANCODE_DOWN) ){
+            js_assert(2);
+        }
+        else {
+            js_deassert(2);
+        }
+
+        if (ImGui::IsKeyPressed(SDL_SCANCODE_UP) ){
+            js_assert(3);
+        }
+        else {
+            js_deassert(3);
+        }
+
+        if (ImGui::IsKeyPressed(SDL_SCANCODE_V) ){
+            js_assert(7);
+        }
+        else {
+            js_deassert(7);
+        }
+        if (ImGui::IsKeyPressed(SDL_SCANCODE_C) ){
+            js_assert(6);
+        }
+        else {
+            js_deassert(6);
+        }
+        if (ImGui::IsKeyPressed(SDL_SCANCODE_X) ){
+            js_assert(5);
+        }
+        else {
+            js_deassert(5);
+        }
+        if (ImGui::IsKeyPressed(SDL_SCANCODE_Z) ){
+            js_assert(4);
+        }
+        else {
+            js_deassert(4);
+        }
+
 		ImGui::NewFrame();
 
 		ImGui::Begin("Virtual Dev Board v1.0");		// Create a window called "Virtual Dev Board v1.0" and append into it.
-
 
 		if (ImGui::Button("RESET")) {
 		    top->reset = 1;
@@ -560,6 +627,7 @@ int main(int argc, char** argv, char** env) {
 		ImGui::Text("Instruction:     0x%04X", top->top__DOT__gigatron_shell__DOT__gigatron__DOT__eeprom__DOT__data__out__out0);
 		ImGui::Text("HS:     %d", top->top__DOT__VGA_HS);
 		ImGui::Text("VS:     %d", top->top__DOT__VGA_VS);
+        ImGui::Text("Joy:    %x", top->top__DOT__joypad_bits);
 
 		ImGui::Checkbox("RUN", &run_enable);
 
