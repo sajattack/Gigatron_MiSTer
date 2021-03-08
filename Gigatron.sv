@@ -186,6 +186,8 @@ localparam CONF_STR = {
 	"-;",
 	"T0,Reset;",
 	"R0,Reset and close OSD;",
+	"J1,A,B,Select,Start;",
+	"jn,A,B,Select,Start;",
 	"V,v",`BUILD_DATE 
 };
 
@@ -193,6 +195,7 @@ wire forced_scandoubler;
 wire  [1:0] buttons;
 wire [31:0] status;
 wire [10:0] ps2_key;
+wire [15:0] joystick;
 
 hps_io #(.STRLEN($size(CONF_STR)>>3)) hps_io
 (
@@ -208,6 +211,7 @@ hps_io #(.STRLEN($size(CONF_STR)>>3)) hps_io
 	.status(status),
 	.status_menumask({status[5]}),
 	
+	.joystick_0(joystick),
 	.ps2_key(ps2_key)
 );
 
@@ -239,17 +243,19 @@ wire reset = RESET | status[0];
 
 //////////////////////////////  MAIN CORE CONNECTIONS  ////////////////////////////////////
 
-wire HBlank;
-wire VBlank;
-
 wire vsync_n;
 wire hsync_n;
 wire [1:0] red;
 wire [1:0] green;
 wire [1:0] blue;
 wire hblank, vblank;
+
 wire [7:0] gigatron_output_port;
 wire [15:0] audio;
+
+wire famicom_latch;
+wire famicom_pulse;
+wire famicom_data;
 
 Gigatron_Shell gigatron_shell(
     .fpga_clock(clk_sys), // 50Mhz FPGA clock
@@ -258,7 +264,7 @@ Gigatron_Shell gigatron_shell(
     .reset(reset),
     .run(1'b1),
 
-    //.gigatron_output_port(gigatron_output_port),
+    .gigatron_output_port(gigatron_output_port),
     //.gigatron_extended_output_port(gigatron_extended_output_port),
     
     //
@@ -334,5 +340,36 @@ assign LED_POWER[1] = 1;
 //////////////////////////////  AUDIO  ////////////////////////////////////
 assign AUDIO_L = audio;
 assign AUDIO_R = audio;
+
+////////////////////////////  INPUT  //////////////////////////////////////
+
+reg [23:0] joypad_bits;
+reg joypad_clock, last_joypad_clock;
+reg joypad_out;
+
+wire [7:0] nes_joy_A = { 
+    joystick[0], joystick[1], joystick[2], joystick[3],
+    joystick[7], joystick[6], joystick[5], joystick[4] 
+};
+
+
+always @(posedge clk_sys) begin
+	if (reset) begin
+		joypad_bits <= 0;
+		last_joypad_clock <= 0;
+	end else begin
+		if (joypad_out) begin
+			joypad_bits  <= {16'hFFFF, ~nes_joy_A};
+		end
+		if (!joypad_clock && last_joypad_clock) begin
+			joypad_bits <= {1'b0, joypad_bits[23:1]};
+		end
+		last_joypad_clock <= joypad_clock;
+	end
+end
+
+assign joypad_out=famicom_latch;
+assign joypad_clock=~famicom_pulse;
+assign famicom_data=joypad_bits[0];
 
 endmodule

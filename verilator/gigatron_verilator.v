@@ -60,9 +60,9 @@ Gigatron_Shell gigatron_shell(
     //
     // These signals are from the Famicom serial game controller.
     //
-    .famicom_pulse(joypad_clock), // output
-    .famicom_latch(joypad_out), // output
-    .famicom_data(joypad_bits[0]), // input
+    .famicom_pulse(famicom_pulse), // output
+    .famicom_latch(famicom_latch), // output
+    .famicom_data(famicom_data), // input
 
     //// Raw VGA signals from the Gigatron
 
@@ -126,8 +126,8 @@ reg joypad_clock, last_joypad_clock;
 reg joypad_out;
 
 wire [7:0] nes_joy_A = { 
-    joystick[1], joystick[2], joystick[3], joystick[7],
-    joystick[6], joystick[5], joystick[4], joystick[0] 
+    joystick[0], joystick[1], joystick[2], joystick[3],
+    joystick[7], joystick[6], joystick[5], joystick[4] 
 };
 
 always @(posedge clk_sys) begin
@@ -144,5 +144,12 @@ always @(posedge clk_sys) begin
 		last_joypad_clock <= joypad_clock;
 	end
 end
+
+wire famicom_latch;
+wire famicom_pulse;
+wire famicom_data;
+assign joypad_out=famicom_latch;
+assign joypad_clock=~famicom_pulse;
+assign famicom_data=joypad_bits[0];
 
 endmodule

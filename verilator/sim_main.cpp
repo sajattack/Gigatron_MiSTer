@@ -380,6 +380,7 @@ static MemoryEditor mem_edit_1;
 
 
 int main(int argc, char** argv, char** env) {
+Verilated::traceEverOn(true);
 #ifdef WINDOWS
 	// Create application window
 	WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(NULL), NULL, NULL, NULL, NULL, _T("ImGui Example"), NULL };
