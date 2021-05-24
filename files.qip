@@ -5,6 +5,7 @@ set_global_assignment -name SYSTEMVERILOG_FILE rtl/gigatron_shell.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/menlo_babelfish.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/x74xx153.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/spram.sv
+set_global_assignment -name VERILOG_FILE rtl/Keyboard.v
 set_global_assignment -name QIP_FILE rtl/gigatron_ram.qip
 set_global_assignment -name QIP_FILE sys/sys.qip
 set_global_assignment -name SDC_FILE Gigatron.sdc

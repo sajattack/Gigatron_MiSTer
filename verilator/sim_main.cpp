@@ -185,6 +185,8 @@ double sc_time_stamp () {	// Called by $time in Verilog.
 }
 
 #define JS      top->top__DOT__joystick
+#define KEYB    top->top__DOT__ps2_key
+
 void
 js_assert(int s)
 {
@@ -561,6 +563,8 @@ Verilated::traceEverOn(true);
 
         ImGuiIO& io = ImGui::GetIO();
 
+        KEYB = 0;
+
         if (ImGui::IsKeyPressed(SDL_SCANCODE_RIGHT) ){
             js_assert(0);
         }
@@ -612,6 +616,15 @@ Verilated::traceEverOn(true);
         else {
             js_deassert(4);
         }
+        if (ImGui::IsKeyPressed(SDL_SCANCODE_F)) {
+            KEYB = 0x2b;
+        }
+        if (ImGui::IsKeyPressed(SDL_SCANCODE_W)) {
+            KEYB = 0x1d;
+        } 
+        if (ImGui::IsKeyPressed(SDL_SCANCODE_Y)) {
+            KEYB = 0x35;
+        }
 
 		ImGui::NewFrame();
 
@@ -629,6 +642,9 @@ Verilated::traceEverOn(true);
 		ImGui::Text("HS:     %d", top->top__DOT__VGA_HS);
 		ImGui::Text("VS:     %d", top->top__DOT__VGA_VS);
         ImGui::Text("Joy:    %x", top->top__DOT__joypad_bits);
+        ImGui::Text("PS2:    %x", top->top__DOT__ps2_key);
+        ImGui::Text("ASCII:  %d", top->top__DOT__ascii_code);
+
 
 		ImGui::Checkbox("RUN", &run_enable);
 

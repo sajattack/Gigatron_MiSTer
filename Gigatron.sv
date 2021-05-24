@@ -229,16 +229,6 @@ pll pll
 	.outclk_2(clk_app)
 );
 
-//reg clk_app;
-//reg [2:0] clk_app_counter;
-//always @(posedge clk_sys) begin
-//    clk_app_counter <= clk_app_counter+1;
-//    if (clk_app_counter==0) begin
-//        clk_app=~clk_app;
-//    end
-//end
-
-
 wire reset = RESET | status[0];
 
 //////////////////////////////  MAIN CORE CONNECTIONS  ////////////////////////////////////
@@ -317,11 +307,7 @@ Gigatron_Shell gigatron_shell(
 );	
 
 //////////////////////////////  VIDEO  ////////////////////////////////////
-//assign red = gigatron_output_port[1:0];
-//assign green = gigatron_output_port[3:2];
-//assign blue = gigatron_output_port[5:4];
-//assign hsync_n = gigatron_output_port[6:6];
-//assign vsync_n = gigatron_output_port[7:7];
+
 assign VGA_R={red,red,red,red};
 assign VGA_G={green,green,green,green};
 assign VGA_B={blue,blue,blue,blue};
@@ -343,7 +329,7 @@ assign AUDIO_R = audio;
 
 ////////////////////////////  INPUT  //////////////////////////////////////
 
-reg [23:0] joypad_bits;
+reg [7:0] joypad_bits;
 reg joypad_clock, last_joypad_clock;
 reg joypad_out;
 
@@ -352,6 +338,18 @@ wire [7:0] nes_joy_A = {
     joystick[7], joystick[6], joystick[5], joystick[4] 
 };
 
+reg [7:0] ascii_code;
+
+wire [7:0] ascii_bitmap = {
+	ascii_code[0], ascii_code[1], ascii_code[2], ascii_code[3],
+	ascii_code[4], ascii_code[5], ascii_code[6], ascii_code[7],
+};
+
+Keyboard keyboard(
+    .ps2_key(ps2_key),
+    .pulse(famicom_pulse),
+    .ascii_code(ascii_code)
+);
 
 always @(posedge clk_sys) begin
 	if (reset) begin
@@ -359,10 +357,10 @@ always @(posedge clk_sys) begin
 		last_joypad_clock <= 0;
 	end else begin
 		if (joypad_out) begin
-			joypad_bits  <= {16'hFFFF, ~nes_joy_A};
+			joypad_bits  <= ~(nes_joy_A | ~ascii_bitmap);
 		end
 		if (!joypad_clock && last_joypad_clock) begin
-			joypad_bits <= {1'b0, joypad_bits[23:1]};
+			joypad_bits <= {1'b0, joypad_bits[7:1]};
 		end
 		last_joypad_clock <= joypad_clock;
 	end
@@ -371,5 +369,6 @@ end
 assign joypad_out=famicom_latch;
 assign joypad_clock=~famicom_pulse;
 assign famicom_data=joypad_bits[0];
+
 
 endmodule

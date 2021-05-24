@@ -22,7 +22,8 @@ module top(VGA_R,VGA_B,VGA_G,VGA_HS,VGA_VS,VGA_DE,reset,clk_sys,clk_vid,clk_app,
    input [7:0]  ioctl_index;
    output  reg  ioctl_wait=1'b0;
    
-reg [31:0]  joystick/*verilator public_flat*/;
+reg [10:0] ps2_key/*verilator public_flat*/;
+reg [31:0] joystick/*verilator public_flat*/;
 
 ////////////////////////////  HPS I/O  //////////////////////////////////
 
@@ -45,6 +46,10 @@ wire [1:0] blue;
 wire hblank, vblank;
 wire [7:0] gigatron_output_port;
 wire [7:0] gigatron_extended_output_port;
+
+wire famicom_pulse;
+wire famicom_latch;
+wire famicom_data;
 
 // verilator lint_off PINMISSING
 Gigatron_Shell gigatron_shell(
@@ -121,7 +126,7 @@ assign VGA_DE = ~(VGA_HS|VGA_VS);
 
 ////////////////////////////  INPUT  //////////////////////////////////////
 
-reg [23:0] joypad_bits;
+reg [7:0] joypad_bits;
 reg joypad_clock, last_joypad_clock;
 reg joypad_out;
 
@@ -130,26 +135,37 @@ wire [7:0] nes_joy_A = {
     joystick[7], joystick[6], joystick[5], joystick[4] 
 };
 
+reg [7:0] ascii_code;
+
+wire [7:0] ascii_bitmap = {
+	ascii_code[0], ascii_code[1], ascii_code[2], ascii_code[3],
+	ascii_code[4], ascii_code[5], ascii_code[6], ascii_code[7],
+};
+
+Keyboard keyboard(
+    .ps2_key(ps2_key),
+    .pulse(famicom_pulse),
+    .ascii_code(ascii_code)
+);
+
 always @(posedge clk_sys) begin
 	if (reset) begin
 		joypad_bits <= 0;
 		last_joypad_clock <= 0;
 	end else begin
 		if (joypad_out) begin
-			joypad_bits  <= {16'hFFFF, ~nes_joy_A};
+			joypad_bits  <= ~(nes_joy_A | ~ascii_bitmap);
 		end
 		if (!joypad_clock && last_joypad_clock) begin
-			joypad_bits <= {1'b0, joypad_bits[23:1]};
+			joypad_bits <= {1'b0, joypad_bits[7:1]};
 		end
 		last_joypad_clock <= joypad_clock;
 	end
 end
 
-wire famicom_latch;
-wire famicom_pulse;
-wire famicom_data;
 assign joypad_out=famicom_latch;
 assign joypad_clock=~famicom_pulse;
 assign famicom_data=joypad_bits[0];
 
 endmodule
+

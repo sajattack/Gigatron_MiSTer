@@ -55,7 +55,8 @@ V_SRC = \
         gigatron_verilator.v \
         $(RTL)/gigatron_onefile.sv $(RTL)/gigatron_eeprom_from_file.sv \
         $(RTL)/gigatron_option_rom.sv $(RTL)/menlo_babelfish.sv $(RTL)/gigatron_shell.sv \
-        $(RTL)/x74xx153.sv $(RTL)/spram.sv
+        $(RTL)/x74xx153.sv $(RTL)/spram.sv \
+        $(RTL)/Keyboard.v
 
 
 C_SRC = \
