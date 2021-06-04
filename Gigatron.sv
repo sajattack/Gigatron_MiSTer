@@ -183,6 +183,7 @@ localparam CONF_STR = {
 	"-;",
 	"O89,Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
 	"-;",
+	"OAC,Keyboard language,US,GB,DE,FR,IT,ES;",
 	"-;",
 	"T0,Reset;",
 	"R0,Reset and close OSD;",
@@ -196,6 +197,7 @@ wire  [1:0] buttons;
 wire [31:0] status;
 wire [10:0] ps2_key;
 wire [15:0] joystick;
+wire caps_lock;
 
 hps_io #(.STRLEN($size(CONF_STR)>>3)) hps_io
 (
@@ -211,6 +213,9 @@ hps_io #(.STRLEN($size(CONF_STR)>>3)) hps_io
 	.status(status),
 	.status_menumask({status[5]}),
 	
+	.ps2_kbd_led_use(3'b001),
+	.ps2_kbd_led_status({2'b00, caps_lock}),
+
 	.joystick_0(joystick),
 	.ps2_key(ps2_key)
 );
@@ -229,7 +234,7 @@ pll pll
 	.outclk_2(clk_app)
 );
 
-wire reset = RESET | status[0];
+wire reset = RESET | status[0] | buttons[1];
 
 //////////////////////////////  MAIN CORE CONNECTIONS  ////////////////////////////////////
 
@@ -346,8 +351,11 @@ wire [7:0] ascii_bitmap = {
 };
 
 Keyboard keyboard(
+    .kb_lang(status[12:10]),
     .ps2_key(ps2_key),
-    .pulse(famicom_pulse),
+    .pulse(clk_app),
+    .reset(reset),
+    .caps_lock(caps_lock),
     .ascii_code(ascii_code)
 );
 
