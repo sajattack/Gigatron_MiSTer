@@ -3400,7 +3400,7 @@ module Gigatron_RAM_Wrapper
   //assign data = (cs && oe && !write) ? read_data : 8'bz;
 
 `ifdef ALTERA_RESERVED_QIS
-    gigatron_ram	gigatron_ram_inst (
+    Gigatron_Ram	gigatron_ram_inst (
     .address (address),
     .clock (clock),
     .data (data),  // RAM write data
