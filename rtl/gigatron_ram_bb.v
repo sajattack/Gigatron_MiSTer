@@ -32,7 +32,7 @@
 //authorized distributors.  Please refer to the applicable 
 //agreement for further details.
 
-module gigatron_ram (
+module Gigatron_Ram (
 	address,
 	clock,
 	data,
