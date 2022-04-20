@@ -139,7 +139,7 @@ reg [7:0] ascii_code;
 
 wire [7:0] ascii_bitmap = {
 	ascii_code[0], ascii_code[1], ascii_code[2], ascii_code[3],
-	ascii_code[4], ascii_code[5], ascii_code[6], ascii_code[7],
+	ascii_code[4], ascii_code[5], ascii_code[6], ascii_code[7]
 };
 
 Keyboard keyboard(

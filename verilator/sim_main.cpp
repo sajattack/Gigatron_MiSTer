@@ -6,6 +6,7 @@
 #include <math.h>
 
 #include <verilated.h>
+#include "tmp/Vtop___024root.h"
 #include "Vtop.h"
 
 #include "../imgui/imgui.h"
@@ -184,8 +185,8 @@ double sc_time_stamp () {	// Called by $time in Verilog.
 	return main_time;
 }
 
-#define JS      top->top__DOT__joystick
-#define KEYB    top->top__DOT__ps2_key
+#define JS      top->rootp->top__DOT__joystick
+#define KEYB    top->rootp->top__DOT__ps2_key
 
 void
 js_assert(int s)
@@ -203,13 +204,13 @@ int verilate() {
 	if (!Verilated::gotFinish()) {
 
 		if (main_time < 2048) {
-			top->reset = 1;   	// Assert reset (active HIGH)
+			top->rootp->reset = 1;   	// Assert reset (active HIGH)
 		}
 		if (main_time == 2048) {	// Do == here, so we can still reset it in the main loop.
-			top->reset = 0;		// Deassert reset.
+			top->rootp->reset = 0;		// Deassert reset.
 		}
 
-		if (top->reset==1) {
+		if (top->rootp->reset==1) {
 		    memset(disp_ptr, 0xaa, VGA_WIDTH*VGA_HEIGHT*4);
 			line_count = 0;
 			pix_count = 0;
@@ -217,51 +218,51 @@ int verilate() {
 		    memset(ram_ptr, 0, ram_size);
 		}
 
-		top->clk_sys=!top->clk_sys;
+		top->rootp->clk_sys=!top->rootp->clk_sys;
 		if (main_time%2==0) {
-		    top->clk_vid=!top->clk_vid;
+		    top->rootp->clk_vid=!top->rootp->clk_vid;
 		}
         if (main_time%8==0) {
-		    top->clk_app=!top->clk_app;
+		    top->rootp->clk_app=!top->rootp->clk_app;
 		}
-		if (top->clk_vid && !top->reset) {
+		if (top->rootp->clk_vid && !top->rootp->reset) {
 
-            line_count = top->top__DOT__gigatron_shell__DOT__gigatron__DOT__vga__DOT__vga_vertical_line_index;
+            line_count = top->rootp->top__DOT__gigatron_shell__DOT__gigatron__DOT__vga__DOT__vga_vertical_line_index;
 
-            pix_count = top->top__DOT__gigatron_shell__DOT__gigatron__DOT__vga__DOT__vga_horizontal_line_index;
+            pix_count = top->rootp->top__DOT__gigatron_shell__DOT__gigatron__DOT__vga__DOT__vga_horizontal_line_index;
             
-           uint32_t vga_addr = top->top__DOT__gigatron_shell__DOT__gigatron__DOT__vga__DOT__vga_framebuffer_write_address;
+           uint32_t vga_addr = top->rootp->top__DOT__gigatron_shell__DOT__gigatron__DOT__vga__DOT__vga_framebuffer_write_address;
 
-		    if (top->VGA_DE && vga_addr<VGA_WIDTH*VGA_HEIGHT) {
+		    if (top->rootp->VGA_DE && vga_addr<VGA_WIDTH*VGA_HEIGHT) {
 
-                rgb[0] = top->VGA_B;
-                rgb[1] = top->VGA_G;
-                rgb[2] = top->VGA_R;
+                rgb[0] = top->rootp->VGA_B;
+                rgb[1] = top->rootp->VGA_G;
+                rgb[2] = top->rootp->VGA_R;
                 disp_ptr[vga_addr] = 0xFF000000 | rgb[0] << 16 | rgb[1] << 8 | rgb[2];	// Our debugger framebuffer is in the 32-bit RGBA format.
             }
 
-            if (prev_vsync && !top->VGA_VS) {
+            if (prev_vsync && !top->rootp->VGA_VS) {
                 frame_count++;
             }
 
-            prev_vsync = top->VGA_VS;
+            prev_vsync = top->rootp->VGA_VS;
         }
 #if 1
-        if (top->top__DOT__gigatron_shell__DOT__gigatron__DOT__ram__DOT__gigatron_ram_inst__DOT__wren) {
-            ram_ptr[top->top__DOT__gigatron_shell__DOT__gigatron__DOT__ram__DOT__gigatron_ram_inst__DOT__address] = top->top__DOT__gigatron_shell__DOT__gigatron__DOT__ram__DOT__gigatron_ram_inst__DOT__data;
+        if (top->rootp->top__DOT__gigatron_shell__DOT__gigatron__DOT__ram__DOT__gigatron_ram_inst__DOT__wren) {
+            ram_ptr[top->rootp->top__DOT__gigatron_shell__DOT__gigatron__DOT__ram__DOT__gigatron_ram_inst__DOT__address] = top->rootp->top__DOT__gigatron_shell__DOT__gigatron__DOT__ram__DOT__gigatron_ram_inst__DOT__data;
         }
 #endif
 
-        if (top->clk_sys) {
+        if (top->rootp->clk_sys) {
             ioctl_upload_before_eval();
             ioctl_download_before_eval();
         }
         else if (ioctl_file)
-            printf("skipping download this cycle %d\n",top->clk_sys);
+            printf("skipping download this cycle %d\n",top->rootp->clk_sys);
 
         top->eval();            // Evaluate model!
 
-        if (top->clk_sys) {
+        if (top->rootp->clk_sys) {
             ioctl_upload_after_eval();
             ioctl_download_after_eval();
         }
@@ -282,38 +283,38 @@ void ioctl_upload_setfile(char *file, int index,int size)
 {
     ioctl_upload_size = size;
     ioctl_next_addr = -1;
-    top->ioctl_addr=ioctl_next_addr;
-    top->ioctl_index = index;
+    top->rootp->ioctl_addr=ioctl_next_addr;
+    top->rootp->ioctl_index = index;
     ioctl_upload_file=fopen(file,"wb");
     if (!ioctl_upload_file) printf("error opening %s\n",file);
 }
 void ioctl_upload_before_eval()
 {
     if (ioctl_upload_file) {
-printf("ioctl_upload_before_eval %x\n",top->ioctl_addr);
-        if (top->ioctl_wait==0) {
-        top->ioctl_upload=1;
-        top->ioctl_wr = 1;
+printf("ioctl_upload_before_eval %x\n",top->rootp->ioctl_addr);
+        if (top->rootp->ioctl_wait==0) {
+        top->rootp->ioctl_upload=1;
+        top->rootp->ioctl_wr = 1;
     
         if (ioctl_next_addr > ioctl_upload_size) {
             fclose(ioctl_upload_file);
             ioctl_upload_file=NULL;
-            top->ioctl_upload=0;
-                top->ioctl_wr = 0;
+            top->rootp->ioctl_upload=0;
+                top->rootp->ioctl_wr = 0;
            printf("finished upload\n");
 
         }
             if (ioctl_upload_file) {
-                fputc(top->ioctl_din,ioctl_upload_file);
+                fputc(top->rootp->ioctl_din,ioctl_upload_file);
         
-printf("ioctl_upload_before_eval: din %x \n",top->ioctl_din);
+printf("ioctl_upload_before_eval: din %x \n",top->rootp->ioctl_din);
                 ioctl_next_addr++;
             }
         }
     }
     else {
-    top->ioctl_upload=0;
-    top->ioctl_wr=0;
+    top->rootp->ioctl_upload=0;
+    top->rootp->ioctl_wr=0;
     }
 
 }
@@ -321,33 +322,33 @@ int nextchar = 0;
 int uploadnextchar = 0;
 void ioctl_upload_after_eval()
 {
-    top->ioctl_addr=ioctl_next_addr;
-uploadnextchar=top->ioctl_din;
-if (ioctl_upload_file) printf("ioctl_upload_after_eval %x wr %x dl %x\n",top->ioctl_addr,top->ioctl_wr,top->ioctl_upload);
+    top->rootp->ioctl_addr=ioctl_next_addr;
+uploadnextchar=top->rootp->ioctl_din;
+if (ioctl_upload_file) printf("ioctl_upload_after_eval %x wr %x dl %x\n",top->rootp->ioctl_addr,top->rootp->ioctl_wr,top->rootp->ioctl_upload);
 }
 
 
 void ioctl_download_setfile(char *file, int index)
 {
     ioctl_next_addr = -1;
-    top->ioctl_addr=ioctl_next_addr;
-    top->ioctl_index = index;
+    top->rootp->ioctl_addr=ioctl_next_addr;
+    top->rootp->ioctl_index = index;
     ioctl_file=fopen(file,"rb");
     if (!ioctl_file) printf("error opening %s\n",file);
 }
 void ioctl_download_before_eval()
 {
     if (ioctl_file) {
-printf("ioctl_download_before_eval %x\n",top->ioctl_addr);
-        if (top->ioctl_wait==0) {
-        top->ioctl_download=1;
-        top->ioctl_wr = 1;
+printf("ioctl_download_before_eval %x\n",top->rootp->ioctl_addr);
+        if (top->rootp->ioctl_wait==0) {
+        top->rootp->ioctl_download=1;
+        top->rootp->ioctl_wr = 1;
         
         if (feof(ioctl_file)) {
             fclose(ioctl_file);
             ioctl_file=NULL;
-            top->ioctl_download=0;
-            top->ioctl_wr = 0;
+            top->rootp->ioctl_download=0;
+            top->rootp->ioctl_wr = 0;
             printf("finished upload\n");
 
         }
@@ -355,25 +356,25 @@ printf("ioctl_download_before_eval %x\n",top->ioctl_addr);
                 int curchar = fgetc(ioctl_file);
     fprintf(stderr,"READ: %x\n",curchar);	
                 if (curchar!=EOF) {
-                //top->ioctl_dout=(char)curchar;
+                //top->rootp->ioctl_dout=(char)curchar;
                 nextchar=curchar;
-printf("ioctl_download_before_eval: dout %x %x\n",top->ioctl_dout,nextchar);
+printf("ioctl_download_before_eval: dout %x %x\n",top->rootp->ioctl_dout,nextchar);
                 ioctl_next_addr++;
                 }
             }
         }
     }
     else {
-    top->ioctl_download=0;
-    top->ioctl_wr=0;
+    top->rootp->ioctl_download=0;
+    top->rootp->ioctl_wr=0;
     }
 
 }
 void ioctl_download_after_eval()
 {
-   top->ioctl_addr=ioctl_next_addr;
-   top->ioctl_dout=(unsigned char)nextchar;
-if (ioctl_file) printf("ioctl_download_after_eval %x wr %x dl %x %x\n",top->ioctl_addr,top->ioctl_wr,top->ioctl_download,top->ioctl_dout);
+   top->rootp->ioctl_addr=ioctl_next_addr;
+   top->rootp->ioctl_dout=(unsigned char)nextchar;
+if (ioctl_file) printf("ioctl_download_after_eval %x wr %x dl %x %x\n",top->rootp->ioctl_addr,top->rootp->ioctl_wr,top->rootp->ioctl_download,top->rootp->ioctl_dout);
 }
 
 int my_count = 0;
@@ -631,19 +632,19 @@ Verilated::traceEverOn(true);
 		ImGui::Begin("Virtual Dev Board v1.0");		// Create a window called "Virtual Dev Board v1.0" and append into it.
 
 		if (ImGui::Button("RESET")) {
-		    top->reset = 1;
+		    top->rootp->reset = 1;
             main_time = 0;
 		}
 		ImGui::Text("main_time %d", main_time);
 		ImGui::Text("frame_count: %d  line_count: %d, pix_count: %d", frame_count, line_count, pix_count);
-		ImGui::Text("Addr:   0x%04X", top->top__DOT__gigatron_shell__DOT__gigatron__DOT__ram__DOT__gigatron_ram_inst__DOT__address);
-		ImGui::Text("PC:     0x%04X", top->top__DOT__gigatron_shell__DOT__gigatron__DOT__cpu__DOT__PC);
-		ImGui::Text("Instruction:     0x%04X", top->top__DOT__gigatron_shell__DOT__gigatron__DOT__eeprom__DOT__data__out__out0);
-		ImGui::Text("HS:     %d", top->top__DOT__VGA_HS);
-		ImGui::Text("VS:     %d", top->top__DOT__VGA_VS);
-        ImGui::Text("Joy:    %x", top->top__DOT__joypad_bits);
-        ImGui::Text("PS2:    %x", top->top__DOT__ps2_key);
-        ImGui::Text("ASCII:  %d", top->top__DOT__ascii_code);
+		ImGui::Text("Addr:   0x%04X", top->rootp->top__DOT__gigatron_shell__DOT__gigatron__DOT__ram__DOT__gigatron_ram_inst__DOT__address);
+		ImGui::Text("PC:     0x%04X", top->rootp->top__DOT__gigatron_shell__DOT__gigatron__DOT__cpu__DOT__PC);
+		ImGui::Text("Instruction:     0x%04X", top->rootp->top__DOT__gigatron_shell__DOT__gigatron__DOT__eeprom__DOT__data__out__out0);
+		ImGui::Text("HS:     %d", top->rootp->top__DOT__VGA_HS);
+		ImGui::Text("VS:     %d", top->rootp->top__DOT__VGA_VS);
+        ImGui::Text("Joy:    %x", top->rootp->top__DOT__joypad_bits);
+        ImGui::Text("PS2:    %x", top->rootp->top__DOT__ps2_key);
+        ImGui::Text("ASCII:  %d", top->rootp->top__DOT__ascii_code);
 
 
 		ImGui::Checkbox("RUN", &run_enable);
