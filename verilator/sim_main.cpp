@@ -2,7 +2,7 @@
 #include "Vtop.h"
 
 #include "imgui.h"
-#include "implot.h"
+//#include "implot.h"
 #ifndef _MSC_VER
 #include <stdio.h>
 #include <SDL.h>
@@ -29,7 +29,7 @@ using namespace std;
 // Simulation control
 // ------------------
 int initialReset = 48;
-bool run_enable = 1;
+bool run_enable = 0;
 int batchSize = 150000;
 bool single_step = 0;
 bool multi_step = 0;
@@ -52,7 +52,7 @@ SimBus bus(console);
 
 // Input handling
 // --------------
-SimInput input(13, console);
+SimInput input(13);
 const int input_right = 0;
 const int input_left = 1;
 const int input_down = 2;
@@ -69,13 +69,15 @@ const int input_menu = 12;
 
 // Video
 // -----
-#define VGA_WIDTH 320
-#define VGA_HEIGHT 240
+// FIXME had to do some weird lies here to get the video to show
+// somewhat correctly, possibly indicative of a bug in my video logic.
+#define VGA_WIDTH 1366
+#define VGA_HEIGHT 504
 #define VGA_ROTATE 0  // 90 degrees anti-clockwise
-#define VGA_SCALE_X vga_scale
+#define VGA_SCALE_X 0.5
 #define VGA_SCALE_Y vga_scale
 SimVideo video(VGA_WIDTH, VGA_HEIGHT, VGA_ROTATE);
-float vga_scale = 2.5;
+float vga_scale = 1.0;
 
 // Verilog module
 // --------------
@@ -86,12 +88,12 @@ double sc_time_stamp() {	// Called by $time in Verilog.
 	return main_time;
 }
 
-int clk_sys_freq = 24000000;
+int clk_sys_freq = 50000000;
 SimClock clk_sys(1);
 
 // Audio
 // -----
-//#define DISABLE_AUDIO
+#define DISABLE_AUDIO
 #ifndef DISABLE_AUDIO
 SimAudio audio(clk_sys_freq, false);
 #endif
@@ -121,7 +123,7 @@ int verilate() {
 		// Simulate both edges of system clock
 		if (clk_sys.clk != clk_sys.old) {
 			if (clk_sys.clk) {
-				input.BeforeEval();
+				//input.BeforeEval();
 				bus.BeforeEval();
 			}
 			top->eval();
@@ -182,7 +184,7 @@ int main(int argc, char** argv, char** env) {
 	bus.ioctl_wr = &top->ioctl_wr;
 	bus.ioctl_dout = &top->ioctl_dout;
 	//bus.ioctl_din = &top->ioctl_din;
-	input.ps2_key = &top->ps2_key;
+	//input.ps2_key = &top->ps2_key;
 
 #ifndef DISABLE_AUDIO
 	audio.Initialise();
@@ -386,26 +388,26 @@ fprintf(stderr,"filePath: %s\n",filePath.c_str());
 		//ImGui::ProgressBar(vol_l + 0.5f, ImVec2(200, 16), 0); ImGui::SameLine();
 		//ImGui::ProgressBar(vol_r + 0.5f, ImVec2(200, 16), 0);
 
-		int ticksPerSec = (24000000 / 60);
+		int ticksPerSec = (clk_sys_freq / 60);
 		if (run_enable) {
 			audio.CollectDebug((signed short)top->AUDIO_L, (signed short)top->AUDIO_R);
 		}
 		int channelWidth = (windowWidth / 2)  -16;
-		ImPlot::CreateContext();
-		if (ImPlot::BeginPlot("Audio - L", ImVec2(channelWidth, 220), ImPlotFlags_NoLegend | ImPlotFlags_NoMenus | ImPlotFlags_NoTitle)) {
-			ImPlot::SetupAxes("T", "A", ImPlotAxisFlags_NoLabel | ImPlotAxisFlags_NoTickMarks, ImPlotAxisFlags_AutoFit | ImPlotAxisFlags_NoLabel | ImPlotAxisFlags_NoTickMarks);
-			ImPlot::SetupAxesLimits(0, 1, -1, 1, ImPlotCond_Once);
-			ImPlot::PlotStairs("", audio.debug_positions, audio.debug_wave_l, audio.debug_max_samples, audio.debug_pos);
-			ImPlot::EndPlot();
-		}
+		//ImPlot::CreateContext();
+		//if (ImPlot::BeginPlot("Audio - L", ImVec2(channelWidth, 220), ImPlotFlags_NoLegend | ImPlotFlags_NoMenus | ImPlotFlags_NoTitle)) {
+			//ImPlot::SetupAxes("T", "A", ImPlotAxisFlags_NoLabel | ImPlotAxisFlags_NoTickMarks, ImPlotAxisFlags_AutoFit | ImPlotAxisFlags_NoLabel | ImPlotAxisFlags_NoTickMarks);
+			//ImPlot::SetupAxesLimits(0, 1, -1, 1, ImPlotCond_Once);
+			//ImPlot::PlotStairs("", audio.debug_positions, audio.debug_wave_l, audio.debug_max_samples, audio.debug_pos);
+			//ImPlot::EndPlot();
+		//}
 		ImGui::SameLine();
-		if (ImPlot::BeginPlot("Audio - R", ImVec2(channelWidth, 220), ImPlotFlags_NoLegend | ImPlotFlags_NoMenus | ImPlotFlags_NoTitle)) {
-			ImPlot::SetupAxes("T", "A", ImPlotAxisFlags_NoLabel | ImPlotAxisFlags_NoTickMarks, ImPlotAxisFlags_AutoFit | ImPlotAxisFlags_NoLabel | ImPlotAxisFlags_NoTickMarks);
-			ImPlot::SetupAxesLimits(0, 1, -1, 1, ImPlotCond_Once);
-			ImPlot::PlotStairs("", audio.debug_positions, audio.debug_wave_r, audio.debug_max_samples, audio.debug_pos);
-			ImPlot::EndPlot();
-		}
-		ImPlot::DestroyContext();
+		//if (ImPlot::BeginPlot("Audio - R", ImVec2(channelWidth, 220), ImPlotFlags_NoLegend | ImPlotFlags_NoMenus | ImPlotFlags_NoTitle)) {
+			//ImPlot::SetupAxes("T", "A", ImPlotAxisFlags_NoLabel | ImPlotAxisFlags_NoTickMarks, ImPlotAxisFlags_AutoFit | ImPlotAxisFlags_NoLabel | ImPlotAxisFlags_NoTickMarks);
+			//ImPlot::SetupAxesLimits(0, 1, -1, 1, ImPlotCond_Once);
+			//ImPlot::PlotStairs("", audio.debug_positions, audio.debug_wave_r, audio.debug_max_samples, audio.debug_pos);
+			//ImPlot::EndPlot();
+		//}
+		//ImPlot::DestroyContext();
 		ImGui::End();
 #endif
 
@@ -452,8 +454,8 @@ fprintf(stderr,"filePath: %s\n",filePath.c_str());
 		if (mouse_clock) { mouse_temp |= (1UL << 24); }
 		mouse_clock = !mouse_clock;
 
-		top->ps2_mouse = mouse_temp;
-		top->ps2_mouse_ext = mouse_x + (mouse_buttons << 8);
+		//top->ps2_mouse = mouse_temp;
+		//top->ps2_mouse_ext = mouse_x + (mouse_buttons << 8);
 
 		// Run simulation
 		if (run_enable) {

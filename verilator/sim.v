@@ -1,18 +1,23 @@
-module top(VGA_R,VGA_B,VGA_G,VGA_HS,VGA_VS,VGA_DE,reset,clk_sys,clk_vid,clk_app,ioctl_upload,ioctl_download,ioctl_addr,ioctl_dout,ioctl_din,ioctl_index,ioctl_wait,ioctl_wr);
+module top(VGA_R,VGA_B,VGA_G,VGA_HS,VGA_VS,VGA_DE,VGA_HB,VGA_VB,CE_PIXEL,AUDIO_L,AUDIO_R,ps2_key,joystick_0,joystick_1,joystick_2,joystick_3,menu,reset,clk_sys,ioctl_upload,ioctl_download,ioctl_addr,ioctl_dout,ioctl_din,ioctl_index,ioctl_wait,ioctl_wr);
 
-   input clk_sys/*verilator public_flat*/;
-   input clk_vid/*verilator public_flat*/;
-   input clk_app/*verilator public_flat*/;
-   input reset/*verilator public_flat*/;
+   input clk_sys;
+   input reset;
 
-   output [7:0] VGA_R/*verilator public_flat*/;
-   output [7:0] VGA_G/*verilator public_flat*/;
-   output [7:0] VGA_B/*verilator public_flat*/;
+   output [7:0] VGA_R;
+   output [7:0] VGA_G;
+   output [7:0] VGA_B;
    
-   output VGA_HS/*verilator public_flat*/;
-   output VGA_VS/*verilator public_flat*/;
-   output VGA_DE/*verilator public_flat*/;
+   output VGA_HS;
+   output VGA_VS;
+   output VGA_DE;
+   output VGA_HB;
+   output VGA_VB;
+   output CE_PIXEL;
    
+   output [15:0] AUDIO_L;
+   output [15:0] AUDIO_R;
+
+
    input        ioctl_upload;
    input        ioctl_download;
    input        ioctl_wr;
@@ -22,8 +27,12 @@ module top(VGA_R,VGA_B,VGA_G,VGA_HS,VGA_VS,VGA_DE,reset,clk_sys,clk_vid,clk_app,
    input [7:0]  ioctl_index;
    output  reg  ioctl_wait=1'b0;
    
-reg [10:0] ps2_key/*verilator public_flat*/;
-reg [31:0] joystick/*verilator public_flat*/;
+   input reg [10:0] ps2_key;
+   input reg [31:0] joystick_0;
+   input reg [31:0] joystick_1;
+   input reg [31:0] joystick_2;
+   input reg [31:0] joystick_3;
+   input reg menu;
 
 ////////////////////////////  HPS I/O  //////////////////////////////////
 
@@ -50,6 +59,24 @@ wire [7:0] gigatron_extended_output_port;
 wire famicom_pulse;
 wire famicom_latch;
 wire famicom_data;
+
+reg clk_app;
+reg clk_vid;
+
+reg clk_vid_divider;
+reg [2:0] clk_app_divider;
+always @(posedge clk_sys) begin
+  if (clk_vid_divider==1'd1) begin
+    clk_vid <= ~clk_vid;
+  end
+  clk_vid_divider <= clk_vid_divider + 1'd1;
+end 
+always @(posedge clk_sys) begin
+  if (clk_app_divider==3'd7) begin
+    clk_app <= ~clk_app;
+  end
+  clk_app_divider <= clk_app_divider + 3'd1;
+end 
 
 // verilator lint_off PINMISSING
 Gigatron_Shell gigatron_shell(
@@ -111,8 +138,7 @@ Gigatron_Shell gigatron_shell(
     //.loader_active(application_active) // output
 );	
 // verilator lint_on PINMISSING
-wire [15:0] AUDIO_L;
-wire [15:0] AUDIO_R = AUDIO_L;
+assign AUDIO_R = AUDIO_L;
 
 //////////////////////////////  VIDEO  ////////////////////////////////////
 assign VGA_R={red,red,red,red};
@@ -121,7 +147,11 @@ assign VGA_B={blue,blue,blue,blue};
 
 assign VGA_HS = ~hsync_n;
 assign VGA_VS = ~vsync_n;
-assign VGA_DE = ~(VGA_HS|VGA_VS);
+assign VGA_DE = ~(hblank|vblank);
+assign VGA_HB = hblank;
+assign VGA_VB = vblank;
+//assign CE_PIXEL = 1'b1;
+assign CE_PIXEL = clk_vid;
 
 ////////////////////////////  INPUT  //////////////////////////////////////
 
@@ -130,8 +160,8 @@ reg joypad_clock, last_joypad_clock;
 reg joypad_out;
 
 wire [7:0] nes_joy_A = { 
-    joystick[0], joystick[1], joystick[2], joystick[3],
-    joystick[7], joystick[6], joystick[5], joystick[4] 
+    joystick_0[0], joystick_0[1], joystick_0[2], joystick_0[3],
+    joystick_0[7], joystick_0[6], joystick_0[5], joystick_0[4] 
 };
 
 reg [7:0] ascii_code;
