@@ -142,10 +142,15 @@ wire [7:0] ascii_bitmap = {
 	ascii_code[4], ascii_code[5], ascii_code[6], ascii_code[7]
 };
 
+wire discard;
+
 Keyboard keyboard(
     .ps2_key(ps2_key),
     .pulse(famicom_pulse),
-    .ascii_code(ascii_code)
+    .ascii_code(ascii_code),
+    .kb_lang(3'd0),
+    .caps_lock(discard),
+    .reset(reset)
 );
 
 always @(posedge clk_sys) begin

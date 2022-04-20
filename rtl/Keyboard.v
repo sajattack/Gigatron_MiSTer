@@ -57,6 +57,7 @@ module Keyboard (
                 9'h011: begin ascii_key <= NONE; ALT_L   <= ps2_pressed; end
                 9'h111: begin ascii_key <= NONE; ALT_R   <= ps2_pressed; end
                 9'h058: begin ascii_key <= NONE; caps_lock <= caps_lock ^ ps2_pressed; end
+                default: begin end
             endcase
 
             // Handle AltGr modifier for DeFrItEs
